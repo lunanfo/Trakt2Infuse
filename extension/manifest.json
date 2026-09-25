@@ -1,0 +1,66 @@
+{
+  "manifest_version": 3,
+  "name": "Trakt to Infuse",
+  "version": "1.0.0",
+  "description": "Seamlessly open Trakt movies, shows, seasons, and episodes in Infuse.",
+  "permissions": [
+    "contextMenus",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://trakt.tv/*",
+    "https://app.trakt.tv/*",
+    "https://api.trakt.tv/*",
+    "https://apiz.trakt.tv/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://trakt.tv/*",
+        "https://app.trakt.tv/*"
+      ],
+      "js": [
+        "interceptor.js"
+      ],
+      "world": "MAIN",
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://trakt.tv/*",
+        "https://app.trakt.tv/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "styles.css"
+      ],
+      "run_at": "document_start"
+    }
+  ],
+  "icons": {
+    "16": "icons/infuse.png",
+    "32": "icons/infuse.png",
+    "48": "icons/infuse.png",
+    "128": "icons/infuse.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/infuse.png",
+        "icons/infuse-mark.png"
+      ],
+      "matches": [
+        "https://trakt.tv/*",
+        "https://app.trakt.tv/*"
+      ]
+    }
+  ],
+  "action": {
+    "default_title": "Trakt to Infuse"
+  }
+}

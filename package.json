@@ -1,0 +1,15 @@
+{
+  "name": "trakt2infuse",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Trakt to Infuse browser extension and userscript",
+  "scripts": {
+    "build:icons": "node tools/build-icons.js --force",
+    "build:userscript": "node tools/build-userscript.js",
+    "build": "npm run build:icons && npm run build:userscript",
+    "test": "node tests/injection.test.js"
+  },
+  "devDependencies": {
+    "jsdom": "^30.0.0"
+  }
+}

@@ -1,0 +1,165 @@
+/* Trakt to Infuse - Styles */
+
+.infuse-icon-injected {
+    box-sizing: border-box !important;
+}
+
+/* Floating poster badge (top-left corner of a poster / episode still).
+   Used by every media card so the look is identical everywhere and the
+   native "mark as watched" ✓ button in the card footer is never touched.
+   The plate follows the site theme: dark surface on dark, light surface on
+   light. The literal values before each color-mix() are the fallback for the
+   legacy trakt.tv site, which has no Trakt theme tokens. */
+.infuse-poster-floating-btn {
+    position: absolute !important;
+    top: 6px !important;
+    left: 6px !important;
+    z-index: 25 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 26px !important;
+    height: 26px !important;
+    min-width: 26px !important;
+    max-width: 26px !important;
+    min-height: 26px !important;
+    max-height: 26px !important;
+    border-radius: 50% !important;
+    background: rgba(0, 0, 0, 0.62) !important;
+    background: color-mix(in srgb, var(--color-card-background, #16181d) 84%, transparent) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-color: color-mix(in srgb, var(--color-foreground, #ffffff) 22%, transparent) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45) !important;
+    box-shadow: 0 2px 6px color-mix(in srgb, var(--color-shadow, #000000) 45%, transparent) !important;
+    backdrop-filter: blur(6px) !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    text-decoration: none !important;
+}
+
+.infuse-poster-floating-btn:hover {
+    /* the plate keeps the theme surface (so the orange mark stays readable on
+       both themes); hover is signalled by an orange ring */
+    border-color: #ff5500 !important;
+    transform: scale(1.12) !important;
+    box-shadow: 0 0 10px rgba(255, 85, 0, 0.6) !important;
+    box-shadow: 0 0 10px color-mix(in srgb, #ff5500 60%, transparent) !important;
+}
+
+.infuse-poster-floating-btn:active {
+    transform: scale(0.95) !important;
+}
+
+/* Transparent brand mark (white plate removed by tools/build-icons.js), so the
+   circular badge shows the mark itself instead of a white square. */
+.infuse-poster-floating-btn img {
+    width: 18px !important;
+    height: 18px !important;
+    object-fit: contain !important;
+    display: block !important;
+    pointer-events: none !important;
+}
+
+/* Button living inside a .trakt-summary-actions-bar: the detail page hero
+   bar and the episode drawer action bar (right next to the purple checkmark).
+   Plate and ring are derived from the theme foreground, so the button reads
+   light on the light theme and dark on the dark theme, like the native ghost
+   actions next to it. */
+.infuse-summary-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    max-width: 40px !important;
+    min-height: 40px !important;
+    max-height: 40px !important;
+    flex: 0 0 auto !important;
+    align-self: center !important;
+    border-radius: 12px !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    background: color-mix(in srgb, var(--color-foreground, #ffffff) 10%, transparent) !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    border-color: color-mix(in srgb, var(--color-foreground, #ffffff) 16%, transparent) !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3) !important;
+    cursor: pointer !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    text-decoration: none !important;
+    backdrop-filter: blur(4px) !important;
+    z-index: 10 !important;
+}
+
+.infuse-summary-btn:hover {
+    /* mirrors the native secondary/purple pill treatment: stronger theme
+       surface plus the brand-coloured ring */
+    background: rgba(255, 255, 255, 0.18) !important;
+    background: color-mix(in srgb, var(--color-foreground, #ffffff) 18%, transparent) !important;
+    border-color: #ff5500 !important;
+    transform: scale(1.06) !important;
+    box-shadow: 0 2px 10px rgba(255, 85, 0, 0.35) !important;
+    box-shadow: 0 2px 10px color-mix(in srgb, #ff5500 35%, transparent) !important;
+}
+
+.infuse-summary-btn:active {
+    transform: scale(0.95) !important;
+}
+
+/* Same transparent mark as the poster badge, sized to read like the native
+   24px glyphs next to it. The container keeps the native ActionButton
+   geometry (40x40, 12px radius) so the row stays aligned. */
+.infuse-summary-btn img {
+    width: 24px !important;
+    height: 24px !important;
+    object-fit: contain !important;
+    display: block !important;
+    pointer-events: none !important;
+}
+
+/* Legacy trakt.tv detail page button */
+.infuse-detail-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    padding: 7px 14px !important;
+    border-radius: 6px !important;
+    background: linear-gradient(135deg, #ff5722 0%, #e64a19 100%) !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    text-decoration: none !important;
+    box-shadow: 0 2px 8px rgba(255, 87, 34, 0.35) !important;
+    border: none !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    margin: 4px 6px 4px 0 !important;
+    line-height: 1 !important;
+    vertical-align: middle !important;
+    white-space: nowrap !important;
+}
+
+.infuse-detail-btn:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(255, 87, 34, 0.5) !important;
+    background: linear-gradient(135deg, #ff7043 0%, #f4511e 100%) !important;
+    color: #ffffff !important;
+}
+
+.infuse-detail-btn img {
+    width: 16px !important;
+    height: 16px !important;
+    object-fit: contain !important;
+    display: inline-block !important;
+}
+
+.infuse-detail-btn span {
+    color: #ffffff !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    line-height: 1 !important;
+}
