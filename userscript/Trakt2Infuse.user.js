@@ -1308,6 +1308,11 @@
     }
 
     /**
+     * Media card containers (app.trakt.tv and the legacy trakt.tv markup).
+     */
+    const CARD_SELECTOR = '.trakt-card, .mini_card, .grid-item, [data-card]';
+
+    /**
      * How specific a card link is: episode > season > show / movie. A card that
      * links to both an episode and its show must always produce the episode link.
      */
@@ -1323,19 +1328,8 @@
      * Every media card gets exactly one floating badge on its poster.
      */
     function injectAllMediaCards(ctx) {
-      const cards = document.querySelectorAll(`
-        .trakt-card,
-        .mini_card,
-        .grid-item,
-        [data-card]
-      `);
-
-      cards.forEach(card => {
-        if (
-          card.closest('header, nav, footer, [role="navigation"], [role="menu"], [role="menubar"], .breadcrumbs, .navbar, .comments, table, tbody')
-        ) {
-          return;
-        }
+      document.querySelectorAll(CARD_SELECTOR).forEach(card => {
+        if (card.closest(SKIP_CONTAINER_SELECTOR)) return;
 
         // Already handled. The badge is re-created automatically whenever Svelte
         // remounts the card content (the check is by presence, not a flag).
@@ -1369,12 +1363,75 @@
       });
     }
 
+    /**
+     * Containers that already own their layout; media links inside them are
+     * skipped by the generic link pass.
+     */
+    const SKIP_CONTAINER_SELECTOR = 'header, nav, footer, [role="navigation"], [role="menu"], [role="menubar"], .breadcrumbs, .navbar, .comments, table, tbody, [role="dialog"], dialog, .trakt-spotlight-palette, .trakt-snackbar, .trakt-toast';
+
+    /**
+     * First ancestor of `element` (up to but excluding `boundary`) that is a
+     * positioning context, i.e. can host an absolutely positioned badge.
+     */
+    function nearestPositioned(element, boundary) {
+      let node = element;
+      while (node && node !== boundary && node !== document.body) {
+        const position = window.getComputedStyle(node).position;
+        if (position && position !== 'static') return node;
+        node = node.parentElement;
+      }
+      return null;
+    }
+
+    /**
+     * Link-centric pass for posters that are not rendered as a .trakt-card.
+     * The week view of the releases/calendar pages renders
+     * `.trakt-calendar-poster-tile` (a plain link + image) instead of a card.
+     */
+    function injectLinkedPosterBadges(ctx) {
+      const links = document.querySelectorAll('a[href*="/shows/"], a[href*="/movies/"]');
+
+      links.forEach(link => {
+        // Cards have their own pass (it picks the most specific link in the card)
+        if (link.closest(CARD_SELECTOR)) return;
+        if (link.closest(SKIP_CONTAINER_SELECTOR)) return;
+        if (link.querySelector('.infuse-poster-floating-btn')) return;
+
+        // Only links that actually show a poster
+        const img = link.querySelector('img');
+        if (!img) return;
+
+        const href = link.getAttribute('href');
+        if (!href) return;
+
+        const info = resolveMediaInfo(href, link.textContent || '', ctx);
+        if (!info) return;
+
+        const deepLink = buildInfuseLink(info);
+        if (!deepLink) return;
+
+        let host = nearestPositioned(img.parentElement || img, link);
+        if (!host && window.getComputedStyle(link).position !== 'static') {
+          host = link;
+        }
+        if (!host) {
+          host = (img.closest('picture') || img).parentElement || link;
+          if (window.getComputedStyle(host).position === 'static') {
+            host.style.position = 'relative';
+          }
+        }
+
+        host.appendChild(createInfuseButton(deepLink, 'infuse-poster-floating-btn', buildTooltip(info)));
+      });
+    }
+
     function injectInfuseUI() {
       const ctx = getPageContext();
 
       try { injectDetailPageHeader(ctx); } catch (e) {}
       try { injectEpisodeDrawer(ctx); } catch (e) {}
       try { injectAllMediaCards(ctx); } catch (e) {}
+      try { injectLinkedPosterBadges(ctx); } catch (e) {}
     }
 
     /**

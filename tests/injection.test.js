@@ -114,6 +114,45 @@ const html = `<!doctype html><html><head></head><body>
       </div>
     </div>
   </div>
+
+  <!-- releases/calendar WEEK view: CalendarPosterTile, not a .trakt-card -->
+  <section class="trakt-calendar-week">
+    <div class="week-days">
+      <div class="week-day">
+        <div class="week-day-items">
+          <div class="trakt-calendar-poster-tile">
+            <a class="trakt-link" href="/shows/silo?view=episode&season=3&episode=4">
+              <div class="tile-poster" style="position:relative;overflow:hidden">
+                <img class="tile-poster-image" src="week-ep.jpg" />
+                <div class="tile-overlay"><span class="trakt-tag">19:00</span></div>
+              </div>
+              <span class="tile-title bold ellipsis">Silo</span>
+              <span class="tile-subtitle secondary ellipsis"><bdi dir="ltr">第 3 季 • 第 4 集</bdi></span>
+            </a>
+          </div>
+          <div class="trakt-calendar-poster-tile">
+            <a class="trakt-link" href="/movies/some-movie">
+              <div class="tile-poster" style="position:relative;overflow:hidden">
+                <img class="tile-poster-image" src="week-movie.jpg" />
+              </div>
+              <span class="tile-title bold ellipsis">Some Movie</span>
+              <span class="tile-subtitle secondary ellipsis">电影</span>
+            </a>
+          </div>
+          <!-- a media link without a poster image must not get a badge -->
+          <a class="trakt-link" href="/shows/silo">Silo</a>
+          <!-- transient snackbar thumbnails are left alone -->
+          <div class="trakt-snackbar">
+            <a class="trakt-link" href="/shows/silo?view=episode&season=1&episode=9">
+              <div class="toast-poster" style="position:relative;overflow:hidden">
+                <img src="toast.jpg" />
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 </main>
 
 <!-- seasons drawer, portaled to body -->
@@ -179,7 +218,8 @@ window.fetch = async (url) => {
 window.localStorage.setItem(
   'trakt2infuse_media_cache',
   JSON.stringify({
-    silo: { tmdb: 12345, imdb: 'tt123', slug: 'silo', type: 'show', title: 'Silo' }
+    silo: { tmdb: 12345, imdb: 'tt123', slug: 'silo', type: 'show', title: 'Silo' },
+    'some-movie': { tmdb: 4242, imdb: 'tt4242', slug: 'some-movie', type: 'movie', title: 'Some Movie' }
   })
 );
 
@@ -250,6 +290,23 @@ function assert(cond, message) {
   assert(!!mixed, 'mixed episode+show card exists in fixture');
   assert(href(mixed.querySelector('.infuse-poster-floating-btn')) === 'infuse://series/12345-2-5',
     `episode link wins over the show link (${href(mixed.querySelector('.infuse-poster-floating-btn'))})`);
+
+  // 4c. week view tiles (no .trakt-card) get a badge too
+  const weekTiles = [...doc.querySelectorAll('.trakt-calendar-poster-tile')];
+  assert(weekTiles.length === 2, `found ${weekTiles.length} week poster tiles`);
+  const weekEpisodeBtn = weekTiles[0].querySelector('.infuse-poster-floating-btn');
+  const weekMovieBtn = weekTiles[1].querySelector('.infuse-poster-floating-btn');
+  assert(!!weekEpisodeBtn && href(weekEpisodeBtn) === 'infuse://series/12345-3-4',
+    `week tile: episode deep link (${weekEpisodeBtn && href(weekEpisodeBtn)})`);
+  assert(!!weekMovieBtn && href(weekMovieBtn) === 'infuse://movie/4242',
+    `week tile: movie deep link (${weekMovieBtn && href(weekMovieBtn)})`);
+  assert(weekEpisodeBtn && weekEpisodeBtn.parentElement.classList.contains('tile-poster'),
+    'week tile: badge is placed on the poster, not the tile wrapper');
+  const posterless = [...doc.querySelectorAll('.week-day-items > a.trakt-link')];
+  assert(posterless.length === 1 && !posterless[0].querySelector('.infuse-icon-injected'),
+    'media link without a poster image gets no badge');
+  assert(!doc.querySelector('.trakt-snackbar .infuse-icon-injected'),
+    'snackbar thumbnails are skipped');
 
   // 5. native footer action is untouched
   const footers = [...doc.querySelectorAll('.trakt-card-footer-action')];
