@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Trakt to Infuse
 // @namespace    http://tampermonkey.net/
-// @version      1.0.0
+// @version      1.0.1
 // @description  Seamlessly open Trakt movies, shows, seasons, and episodes in Infuse.
 // @author       xSequip
 // @match        https://trakt.tv/*
