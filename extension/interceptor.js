@@ -111,6 +111,7 @@
       const url = typeof args[0] === 'string' ? args[0] : (args[0] && args[0].url) || '';
       const isCandidate =
         url.includes('trakt.tv') ||
+        url.includes('tvtime.trakt.tv') ||
         url.includes('/users/') ||
         url.includes('/sync/') ||
         url.includes('/calendars/') ||
@@ -160,6 +161,7 @@
           const url = this._traktUrl || '';
           const isCandidate =
             url.includes('trakt.tv') ||
+            url.includes('tvtime.trakt.tv') ||
             url.includes('/users/') ||
             url.includes('/sync/') ||
             url.includes('/calendars/') ||

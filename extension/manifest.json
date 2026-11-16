@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Trakt to Infuse",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Seamlessly open Trakt movies, shows, seasons, and episodes in Infuse.",
   "permissions": [
     "contextMenus",
@@ -10,6 +10,8 @@
   "host_permissions": [
     "https://trakt.tv/*",
     "https://app.trakt.tv/*",
+    "https://og.trakt.tv/*",
+    "https://tvtime.trakt.tv/*",
     "https://api.trakt.tv/*",
     "https://apiz.trakt.tv/*"
   ],
@@ -20,7 +22,9 @@
     {
       "matches": [
         "https://trakt.tv/*",
-        "https://app.trakt.tv/*"
+        "https://app.trakt.tv/*",
+        "https://og.trakt.tv/*",
+        "https://tvtime.trakt.tv/*"
       ],
       "js": [
         "interceptor.js"
@@ -31,7 +35,9 @@
     {
       "matches": [
         "https://trakt.tv/*",
-        "https://app.trakt.tv/*"
+        "https://app.trakt.tv/*",
+        "https://og.trakt.tv/*",
+        "https://tvtime.trakt.tv/*"
       ],
       "js": [
         "content.js"
@@ -56,7 +62,9 @@
       ],
       "matches": [
         "https://trakt.tv/*",
-        "https://app.trakt.tv/*"
+        "https://app.trakt.tv/*",
+        "https://og.trakt.tv/*",
+        "https://tvtime.trakt.tv/*"
       ]
     }
   ],

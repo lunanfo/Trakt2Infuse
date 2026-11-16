@@ -13,14 +13,14 @@
   <a href="https://github.com/lunanfo/Trakt2Infuse/raw/main/userscript/Trakt2Infuse.user.js">
     <img src="https://img.shields.io/badge/Install-Tampermonkey-red?style=flat-square&logo=tampermonkey" alt="Install Tampermonkey" />
   </a>
-  <img src="https://img.shields.io/badge/Supports-app.trakt.tv-7952b3?style=flat-square" alt="Supports app.trakt.tv" />
+  <img src="https://img.shields.io/badge/Supports-app.trakt.tv_·_og.trakt.tv_·_tvtime.trakt.tv-7952b3?style=flat-square" alt="Supports app.trakt.tv, og.trakt.tv and tvtime.trakt.tv" />
   <img src="https://img.shields.io/badge/Infuse-Deep%20Link-ff5500?style=flat-square" alt="Infuse Deep Link" />
   <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="License MIT" />
 </p>
 
 ---
 
-**Trakt to Infuse** 是专为影视爱好者打造的轻量级浏览器扩展程序与 Tampermonkey 油猴脚本。它无缝整合了 **[Trakt.tv](https://trakt.tv)**（包括其现代单页应用 **[app.trakt.tv](https://app.trakt.tv)**）与 Apple 生态顶级播放器 **[Infuse](https://firecore.com/infuse)**。
+**Trakt to Infuse** 是专为影视爱好者打造的轻量级浏览器扩展程序与 Tampermonkey 油猴脚本。它无缝整合了 **[Trakt.tv](https://trakt.tv)**（包括其现代单页应用 **[app.trakt.tv](https://app.trakt.tv)**、经典复刻主题 **[og.trakt.tv](https://og.trakt.tv)** 与全新 **[TV Time 网页版](https://tvtime.trakt.tv)**）与 Apple 生态顶级播放器 **[Infuse](https://firecore.com/infuse)**。
 
 无论你是在浏览电影、电视剧主页、季度列表，还是点击任意单集，只需轻轻一点，即可通过 `infuse://` 协议直接在 Mac、iPhone、iPad 或 Apple TV 上调起 Infuse 开始播放！
 
@@ -47,6 +47,16 @@
 > 2. **季与单集侧边抽屉 (Drawer)**：在抽屉自身的独立操作栏内动态注入播放按钮，直达对应单集，不破坏顶部关闭区域；
 > 3. **卡片海报浮动徽标**：在剧集季卡片、单集剧照、日历排期等海报左上角显示 26×26 的精致圆形浮动徽标，完整保留底部的原生「✓」操作，互不干扰。
 
+**TV Time 网页版 ([tvtime.trakt.tv](https://tvtime.trakt.tv)) 已完整覆盖**：详情页 `.summary-actions-row` 操作栏按钮（紧贴原生 ✓ 按钮）与 `.poster-card` 海报卡片浮动徽标，同样跟随暗亮主题自适应。
+
+### 🖼 经典主题 og.trakt.tv（Trakt OG Redux）
+
+在 `og.trakt.tv` 上，点击海报卡片操作条、详情页或推荐位操作区中的 Infuse 图标，即可打开对应剧集或电影。播出表和日历周列表同样支持，且图标不会遮挡海报。
+
+![og.trakt.tv 注入效果（暗色 / 亮色）](docs/og-injection-preview.png)
+
+图标会跟随站点的暗色与亮色主题自动适配。
+
 ---
 
 ## ✨ 核心特性 (Features)
@@ -62,12 +72,14 @@
 - **单集抽屉 (Episode Drawer)**：抽屉开启后，动态在抽屉主控制栏内注入单集播放按钮，不再错误地侵入顶部关闭区域。
 - **卡片海报徽标 (Poster Floating Badge)**：在剧集季卡片、单集剧照、日历排期、推荐榜单等左上角显示 26×26 的精致圆形浮动徽标。
 - **非卡片海报同样覆盖**：除 `.trakt-card` 卡片外，还会扫描所有指向 `/shows/`、`/movies/` 且带海报图片的链接，因此 Release 页「按周(week)」视图这类由 `.trakt-calendar-poster-tile` 渲染的窄海报同样会显示徽标（搜索浮层与 Toast 缩略图会自动跳过）。
+- **og.trakt.tv 支持**：在卡片、详情页、推荐位、播出表和日历周列表中提供 Infuse 快捷入口，点击即可打开对应内容；
 - **防重复与重绘防御**：针对 Svelte 单页应用的组件频繁卸载与重绘机制进行了响应式防御，DOM 更新后自动补齐，且绝不多重注入。
 
 ### 3. 🎨 完美主题自适应与精纯图标 (Adaptive Theming & Pure Mark)
 - **剔除白底方块**：通过专门的图像处理管道自动扣除原始图标的白色底板，提取出纯净的橙色 Infuse 品牌标志。
 - **自适应 Trakt 主题变量**：完美跟随 `dark`、`light`、`system` 外观以及 Trakt 季节性主题。
 - **优雅交互动效**：悬停时触发高亮橙色光环与微缩放动效，视觉体验丝滑。
+- **og.trakt.tv 暗亮主题适配**：图标与按钮会跟随站点当前主题自动切换。
 
 ### 4. 📺 全维度 Infuse 协议链接覆盖 (Full Infuse Deep Link Support)
 - **电影 (Movie)**：自动生成 TMDB / IMDb 电影链接。
@@ -78,7 +90,7 @@
 ### 5. 🛡️ 智能降级与容灾能力 (Fallback & Resilience)
 - **URL 与文本智能提取**：支持现代查询参数（`?season=3&episode=1&view=episode`）与传统路径（`/seasons/3/episodes/1`），并辅以多语言标题（`第 3 季 • 第 1 集`、`S03E01`、`Season 3 Episode 1` 等）智能正则识别。
 - **DOM 外链兜底**：自动扫描详情页中的 TMDB / IMDb 官方外链作为补充来源。
-- **静默授权回退**：遇到冷门未缓存条目时，动态读取 Trakt 本地 OIDC Token 触发后台静默请求，并具备请求锁与 15 秒 TTL 超时释放保护。
+- **后台查询调度器**：遇到未缓存条目时，仅向后台传递页面公开的 Trakt API Key，不发送 OIDC access token。所有查询进入统一调度队列：可见卡片优先、6 并发、请求间隔 80ms、单次 10 秒超时、失败按 5s → 30s → 2min 退避，并对同一 slug 去重。这样整屏海报不会在每次注入轮询时重复轰炸 API，同时避免 Cloudflare 限流造成的「前几个注入成功、其余不出现」。
 - **右键上下文菜单**：在任何剧集或电影链接上点击鼠标右键，均可通过右键菜单「Open in Infuse」快速启动播放。
 
 ---
@@ -133,7 +145,7 @@
    - 点击左上角的 **「加载已解压的扩展程序 (Load unpacked)」**。
    - 选择项目根目录下的 **`extension/`** 文件夹。
 5. **开始体验**：
-   - 访问 [app.trakt.tv](https://app.trakt.tv) 或 [trakt.tv](https://trakt.tv)，点击橙色 Infuse 按钮一键开启播放！
+   - 访问 [app.trakt.tv](https://app.trakt.tv)、[og.trakt.tv](https://og.trakt.tv)、[tvtime.trakt.tv](https://tvtime.trakt.tv) 或 [trakt.tv](https://trakt.tv)，点击橙色 Infuse 按钮一键开启播放！
 
 ---
 
@@ -193,12 +205,16 @@ npm run build
 npm test
 
 # 6. 单独测试某一端
-TARGET=extension node tests/injection.test.js
-TARGET=userscript node tests/injection.test.js
+TARGET=extension node tests/injection.test.js                # app.trakt.tv fixture
+TARGET=userscript node tests/injection.test.js               # app.trakt.tv fixture
+TVTIME=1 TARGET=extension node tests/injection.test.js       # tvtime.trakt.tv fixture
+TVTIME=1 TARGET=userscript node tests/injection.test.js      # tvtime.trakt.tv fixture
+OG=1 TARGET=extension node tests/injection.test.js           # og.trakt.tv fixture
+OG=1 TARGET=userscript node tests/injection.test.js          # og.trakt.tv fixture
 ```
 
 ### 测试验证机制
-测试套件使用 `jsdom` 严格复刻了 `app.trakt.tv` 的真实 DOM 树（包含 Svelte 动态插槽、Drawer 抽屉、卡片网格以及多种季集路由格式），对注入位置、选择器特异性、主题跟随、去重机制以及 Svelte 重绘后的自我修复进行全面校验。
+测试套件使用 `jsdom` 严格复刻了 `app.trakt.tv`、`tvtime.trakt.tv` 与 `og.trakt.tv` 的真实 DOM 树（包含 Svelte 动态插槽、Drawer 抽屉、卡片网格、TV Time 的 `poster-card` / `summary-actions-row`、OG Redux 的 `poster-card` + `.quick-icons` 操作条 / `data-trakt-og-key` 结构化键 / 播出表卡片 / 日历周列表以及多种季集路由格式），对注入位置、选择器特异性、主题跟随、去重机制以及 Svelte 重绘后的自我修复进行全面校验；OG 用例还断言**任何注入都不会落到海报上**。
 
 ---
 

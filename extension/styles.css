@@ -120,6 +120,67 @@
     pointer-events: none !important;
 }
 
+/* tvtime.trakt.tv (TV Time web app) uses the same Trakt theme tokens, so the
+   floating badge and the 40x40 summary button above work as-is. Only the
+   fallback aside button (rendered when the native action row is missing, e.g.
+   for logged-out visitors) needs its own treatment: it leans on the aside's
+   poster column, sized between the two variants above. */
+.infuse-tvtime-aside-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    max-width: 36px !important;
+    min-height: 36px !important;
+    max-height: 36px !important;
+    border-radius: 50% !important;
+    background: rgba(0, 0, 0, 0.55) !important;
+    background: color-mix(in srgb, var(--color-card-background, #16181d) 82%, transparent) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-color: color-mix(in srgb, var(--color-foreground, #ffffff) 22%, transparent) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
+    box-shadow: 0 2px 6px color-mix(in srgb, var(--color-shadow, #000000) 40%, transparent) !important;
+    backdrop-filter: blur(6px) !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    text-decoration: none !important;
+    z-index: 20 !important;
+}
+
+.infuse-tvtime-aside-btn:hover {
+    border-color: #ff5500 !important;
+    transform: scale(1.08) !important;
+    box-shadow: 0 0 10px rgba(255, 85, 0, 0.55) !important;
+    box-shadow: 0 0 10px color-mix(in srgb, #ff5500 55%, transparent) !important;
+}
+
+.infuse-tvtime-aside-btn:active {
+    transform: scale(0.95) !important;
+}
+
+.infuse-tvtime-aside-btn img {
+    width: 20px !important;
+    height: 20px !important;
+    object-fit: contain !important;
+    display: block !important;
+    pointer-events: none !important;
+}
+
+/* On the TV Time aside the badge sits under the poster image, above the
+   details list. */
+.summary-aside .infuse-tvtime-aside-btn {
+    position: static !important;
+}
+
+.summary-aside .infuse-tvtime-aside-btn + .media-details,
+.summary-aside .infuse-tvtime-aside-btn ~ .media-details {
+    margin-top: 8px !important;
+}
+
 /* Legacy trakt.tv detail page button */
 .infuse-detail-btn {
     display: inline-flex !important;
@@ -162,4 +223,169 @@
     font-size: 13px !important;
     font-weight: 600 !important;
     line-height: 1 !important;
+}
+
+/* ---------------------------------------------------------------------------
+   og.trakt.tv — "Trakt OG Redux"
+
+   The classic theme keeps the artwork untouched, so the Infuse button is a
+   glyph inside the card's own `.quick-icons` action strip, immediately left of
+   the ❤️ rating (the strip is `justify-content: space-between`, so the auto
+   margin pushes the glyph against the rating block).
+
+   Geometry comes from the strip's own custom properties:
+     --bar          row height (35px in `.small`, 40px otherwise)
+     --action-width cell width (28px in `.small`, 35px otherwise)
+   .base and hover fill are copied from the native `.action` so the button feels
+   native without painting a full brand-color block behind a full-color logo.
+   --------------------------------------------------------------------------- */
+
+.infuse-quick-btn {
+    display: grid !important;
+    place-items: center !important;
+    flex: 0 0 auto !important;
+    width: var(--action-width, var(--quick-icons-row-cell, 28px)) !important;
+    height: calc(var(--bar, 35px) - 1px) !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 0 0 auto !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: inherit !important;
+    line-height: 1 !important;
+    cursor: pointer !important;
+    text-decoration: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+.infuse-quick-btn img {
+    display: block !important;
+    /* ≈16.8px in a 35px strip, ≈19.2px in the 40px strip: the solid brand
+       mark needs a touch less height than the line glyphs next to it to read
+       at the same optical weight as the ❤️. */
+    width: calc(var(--bar, 35px) * 0.48) !important;
+    height: calc(var(--bar, 35px) * 0.48) !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    object-fit: contain !important;
+    opacity: 0.92;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.infuse-quick-btn:hover,
+.infuse-quick-btn:focus-visible {
+    background: rgba(127, 127, 127, 0.14) !important;
+    background: light-dark(rgba(0, 0, 0, 0.055), rgba(255, 255, 255, 0.09)) !important;
+    outline: none !important;
+}
+
+.infuse-quick-btn:hover img,
+.infuse-quick-btn:focus-visible img {
+    opacity: 1;
+    transform: scale(1.06);
+}
+
+.infuse-quick-btn:focus-visible {
+    outline: 2px solid currentColor !important;
+    outline-offset: -2px !important;
+}
+
+/* Hero rows (details page, recommendation spotlight): the neighbouring
+   controls are `.glass-action` pills, so take the same square shape. */
+.infuse-glass-btn {
+    display: inline-grid !important;
+    place-items: center !important;
+    flex: 0 0 auto !important;
+    width: var(--infuse-action-size, var(--glass-action-height, 34px)) !important;
+    height: var(--infuse-action-size, var(--glass-action-height, 34px)) !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    border: 1px solid rgba(127, 127, 127, 0.32) !important;
+    border-color: light-dark(rgba(0, 0, 0, 0.14), rgba(255, 255, 255, 0.2)) !important;
+    border-radius: var(--radius-control, 8px) !important;
+    background: rgba(127, 127, 127, 0.1) !important;
+    background: light-dark(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.07)) !important;
+    color: inherit !important;
+    line-height: 1 !important;
+    cursor: pointer !important;
+    text-decoration: none !important;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+/* Discover and chart heroes use the larger season button row. */
+.actions:has(> .button) > .infuse-glass-btn {
+    --infuse-action-size: var(--season-hero-action, 42px);
+}
+
+.infuse-glass-btn img {
+    display: block !important;
+    width: 18px !important;
+    height: 18px !important;
+    max-width: none !important;
+    object-fit: contain !important;
+}
+
+.infuse-glass-btn:hover,
+.infuse-glass-btn:focus-visible {
+    background: light-dark(rgba(0, 0, 0, 0.06), rgba(255, 255, 255, 0.13)) !important;
+    border-color: light-dark(rgba(0, 0, 0, 0.2), rgba(255, 255, 255, 0.3)) !important;
+    outline: none !important;
+}
+
+.infuse-glass-btn:focus-visible {
+    outline: 2px solid currentColor !important;
+    outline-offset: 1px !important;
+}
+
+/* Rows without an action strip: schedule cards ("Watch Now") and the calendar
+   week list (appended to the tag row). */
+.infuse-mini-btn {
+    display: inline-grid !important;
+    place-items: center !important;
+    flex: 0 0 auto !important;
+    width: 22px !important;
+    height: 22px !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 6px 0 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 5px !important;
+    background: transparent !important;
+    color: inherit !important;
+    line-height: 1 !important;
+    vertical-align: middle !important;
+    cursor: pointer !important;
+    text-decoration: none !important;
+}
+
+.infuse-mini-btn img {
+    display: block !important;
+    width: 16px !important;
+    height: 16px !important;
+    max-width: none !important;
+    object-fit: contain !important;
+    opacity: 0.92;
+}
+
+.infuse-mini-btn:hover,
+.infuse-mini-btn:focus-visible {
+    background: rgba(127, 127, 127, 0.16) !important;
+    background: light-dark(rgba(0, 0, 0, 0.07), rgba(255, 255, 255, 0.1)) !important;
+    outline: none !important;
+}
+
+.infuse-mini-btn:hover img,
+.infuse-mini-btn:focus-visible img {
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .infuse-quick-btn img,
+    .infuse-glass-btn {
+        transition: none;
+    }
 }

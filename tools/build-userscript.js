@@ -38,10 +38,19 @@ const headerMatch = previous.match(/\/\/ ==UserScript==[\s\S]*?\/\/ ==\/UserScri
 if (!headerMatch) {
   throw new Error('existing userscript header not found');
 }
-const header = headerMatch[0].replace(
+let header = headerMatch[0].replace(
   /(\/\/ @version\s+)\S+/,
   `$1${version}`
 );
+// Keep @match in sync with the extension's content-script targets.
+for (const host of ['og.trakt.tv', 'tvtime.trakt.tv']) {
+  const line = `// @match        https://${host}/*`;
+  if (header.includes(line)) continue;
+  header = header.replace(
+    /(\/\/ @match\s+https:\/\/app\.trakt\.tv\/\*\n)/,
+    `$1${line}\n`
+  );
+}
 
 // --- body parts --------------------------------------------------------------
 const start = content.indexOf('  const CACHE_KEY');

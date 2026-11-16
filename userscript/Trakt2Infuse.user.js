@@ -1,14 +1,19 @@
 // ==UserScript==
 // @name         Trakt to Infuse
 // @namespace    http://tampermonkey.net/
-// @version      1.0.1
+// @version      1.0.2
 // @description  Seamlessly open Trakt movies, shows, seasons, and episodes in Infuse.
 // @author       xSequip
 // @match        https://trakt.tv/*
 // @match        https://app.trakt.tv/*
+// @match        https://og.trakt.tv/*
+// @match        https://tvtime.trakt.tv/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=trakt.tv
 // @grant        GM_addStyle
 // @grant        GM_registerMenuCommand
+// @grant        GM_xmlhttpRequest
+// @connect      api.trakt.tv
+// @connect      apiz.trakt.tv
 // @run-at       document-start
 // ==/UserScript==
 
@@ -141,6 +146,67 @@
     pointer-events: none !important;
 }
 
+/* tvtime.trakt.tv (TV Time web app) uses the same Trakt theme tokens, so the
+   floating badge and the 40x40 summary button above work as-is. Only the
+   fallback aside button (rendered when the native action row is missing, e.g.
+   for logged-out visitors) needs its own treatment: it leans on the aside's
+   poster column, sized between the two variants above. */
+.infuse-tvtime-aside-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    max-width: 36px !important;
+    min-height: 36px !important;
+    max-height: 36px !important;
+    border-radius: 50% !important;
+    background: rgba(0, 0, 0, 0.55) !important;
+    background: color-mix(in srgb, var(--color-card-background, #16181d) 82%, transparent) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-color: color-mix(in srgb, var(--color-foreground, #ffffff) 22%, transparent) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
+    box-shadow: 0 2px 6px color-mix(in srgb, var(--color-shadow, #000000) 40%, transparent) !important;
+    backdrop-filter: blur(6px) !important;
+    cursor: pointer !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    text-decoration: none !important;
+    z-index: 20 !important;
+}
+
+.infuse-tvtime-aside-btn:hover {
+    border-color: #ff5500 !important;
+    transform: scale(1.08) !important;
+    box-shadow: 0 0 10px rgba(255, 85, 0, 0.55) !important;
+    box-shadow: 0 0 10px color-mix(in srgb, #ff5500 55%, transparent) !important;
+}
+
+.infuse-tvtime-aside-btn:active {
+    transform: scale(0.95) !important;
+}
+
+.infuse-tvtime-aside-btn img {
+    width: 20px !important;
+    height: 20px !important;
+    object-fit: contain !important;
+    display: block !important;
+    pointer-events: none !important;
+}
+
+/* On the TV Time aside the badge sits under the poster image, above the
+   details list. */
+.summary-aside .infuse-tvtime-aside-btn {
+    position: static !important;
+}
+
+.summary-aside .infuse-tvtime-aside-btn + .media-details,
+.summary-aside .infuse-tvtime-aside-btn ~ .media-details {
+    margin-top: 8px !important;
+}
+
 /* Legacy trakt.tv detail page button */
 .infuse-detail-btn {
     display: inline-flex !important;
@@ -183,6 +249,171 @@
     font-size: 13px !important;
     font-weight: 600 !important;
     line-height: 1 !important;
+}
+
+/* ---------------------------------------------------------------------------
+   og.trakt.tv — "Trakt OG Redux"
+
+   The classic theme keeps the artwork untouched, so the Infuse button is a
+   glyph inside the card's own \`.quick-icons\` action strip, immediately left of
+   the ❤️ rating (the strip is \`justify-content: space-between\`, so the auto
+   margin pushes the glyph against the rating block).
+
+   Geometry comes from the strip's own custom properties:
+     --bar          row height (35px in \`.small\`, 40px otherwise)
+     --action-width cell width (28px in \`.small\`, 35px otherwise)
+   .base and hover fill are copied from the native \`.action\` so the button feels
+   native without painting a full brand-color block behind a full-color logo.
+   --------------------------------------------------------------------------- */
+
+.infuse-quick-btn {
+    display: grid !important;
+    place-items: center !important;
+    flex: 0 0 auto !important;
+    width: var(--action-width, var(--quick-icons-row-cell, 28px)) !important;
+    height: calc(var(--bar, 35px) - 1px) !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 0 0 auto !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: inherit !important;
+    line-height: 1 !important;
+    cursor: pointer !important;
+    text-decoration: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+.infuse-quick-btn img {
+    display: block !important;
+    /* ≈16.8px in a 35px strip, ≈19.2px in the 40px strip: the solid brand
+       mark needs a touch less height than the line glyphs next to it to read
+       at the same optical weight as the ❤️. */
+    width: calc(var(--bar, 35px) * 0.48) !important;
+    height: calc(var(--bar, 35px) * 0.48) !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    object-fit: contain !important;
+    opacity: 0.92;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.infuse-quick-btn:hover,
+.infuse-quick-btn:focus-visible {
+    background: rgba(127, 127, 127, 0.14) !important;
+    background: light-dark(rgba(0, 0, 0, 0.055), rgba(255, 255, 255, 0.09)) !important;
+    outline: none !important;
+}
+
+.infuse-quick-btn:hover img,
+.infuse-quick-btn:focus-visible img {
+    opacity: 1;
+    transform: scale(1.06);
+}
+
+.infuse-quick-btn:focus-visible {
+    outline: 2px solid currentColor !important;
+    outline-offset: -2px !important;
+}
+
+/* Hero rows (details page, recommendation spotlight): the neighbouring
+   controls are \`.glass-action\` pills, so take the same square shape. */
+.infuse-glass-btn {
+    display: inline-grid !important;
+    place-items: center !important;
+    flex: 0 0 auto !important;
+    width: var(--infuse-action-size, var(--glass-action-height, 34px)) !important;
+    height: var(--infuse-action-size, var(--glass-action-height, 34px)) !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    border: 1px solid rgba(127, 127, 127, 0.32) !important;
+    border-color: light-dark(rgba(0, 0, 0, 0.14), rgba(255, 255, 255, 0.2)) !important;
+    border-radius: var(--radius-control, 8px) !important;
+    background: rgba(127, 127, 127, 0.1) !important;
+    background: light-dark(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.07)) !important;
+    color: inherit !important;
+    line-height: 1 !important;
+    cursor: pointer !important;
+    text-decoration: none !important;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+/* Discover and chart heroes use the larger season button row. */
+.actions:has(> .button) > .infuse-glass-btn {
+    --infuse-action-size: var(--season-hero-action, 42px);
+}
+
+.infuse-glass-btn img {
+    display: block !important;
+    width: 18px !important;
+    height: 18px !important;
+    max-width: none !important;
+    object-fit: contain !important;
+}
+
+.infuse-glass-btn:hover,
+.infuse-glass-btn:focus-visible {
+    background: light-dark(rgba(0, 0, 0, 0.06), rgba(255, 255, 255, 0.13)) !important;
+    border-color: light-dark(rgba(0, 0, 0, 0.2), rgba(255, 255, 255, 0.3)) !important;
+    outline: none !important;
+}
+
+.infuse-glass-btn:focus-visible {
+    outline: 2px solid currentColor !important;
+    outline-offset: 1px !important;
+}
+
+/* Rows without an action strip: schedule cards ("Watch Now") and the calendar
+   week list (appended to the tag row). */
+.infuse-mini-btn {
+    display: inline-grid !important;
+    place-items: center !important;
+    flex: 0 0 auto !important;
+    width: 22px !important;
+    height: 22px !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 6px 0 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 5px !important;
+    background: transparent !important;
+    color: inherit !important;
+    line-height: 1 !important;
+    vertical-align: middle !important;
+    cursor: pointer !important;
+    text-decoration: none !important;
+}
+
+.infuse-mini-btn img {
+    display: block !important;
+    width: 16px !important;
+    height: 16px !important;
+    max-width: none !important;
+    object-fit: contain !important;
+    opacity: 0.92;
+}
+
+.infuse-mini-btn:hover,
+.infuse-mini-btn:focus-visible {
+    background: rgba(127, 127, 127, 0.16) !important;
+    background: light-dark(rgba(0, 0, 0, 0.07), rgba(255, 255, 255, 0.1)) !important;
+    outline: none !important;
+}
+
+.infuse-mini-btn:hover img,
+.infuse-mini-btn:focus-visible img {
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .infuse-quick-btn img,
+    .infuse-glass-btn {
+        transition: none;
+    }
 }
     `;
 
@@ -303,6 +534,7 @@
             const url = typeof args[0] === 'string' ? args[0] : (args[0] && args[0].url) || '';
             const isCandidate =
               url.includes('trakt.tv') ||
+              url.includes('tvtime.trakt.tv') ||
               url.includes('/users/') ||
               url.includes('/sync/') ||
               url.includes('/calendars/') ||
@@ -352,6 +584,7 @@
                 const url = this._traktUrl || '';
                 const isCandidate =
                   url.includes('trakt.tv') ||
+                  url.includes('tvtime.trakt.tv') ||
                   url.includes('/users/') ||
                   url.includes('/sync/') ||
                   url.includes('/calendars/') ||
@@ -379,10 +612,10 @@
 
     const CACHE_KEY = 'trakt2infuse_media_cache';
     const DEFAULT_CLIENT_ID = '201dc70c5ec6af530f12f079ea1922733f6e1085ad7b02f36d8e011b75bcea7d';
+    // The TV Time web app ships its own Trakt API key; without it the fallback
+    // lookup below would hit api.trakt.tv with the wrong client id.
+    const TVTIME_CLIENT_ID = 'ab84b6e356dcef9c0a32130b7043d1d33aa961b63df937dd6bdb8d211048ebc2';
 
-    // Release an in-flight fallback lookup after this long so a failed request
-    // can be retried instead of locking the slug forever.
-    const PENDING_TTL_MS = 15000;
     const SAVE_DEBOUNCE_MS = 1500;
     const RESCAN_INTERVAL_MS = 2000;
     const INJECT_DEBOUNCE_MS = 60;
@@ -393,6 +626,9 @@
     let mediaCache = {};
     // slug -> timestamp of the in-flight fallback request
     const pendingFetches = new Map();
+    // A real API key captured from the page's own Trakt requests. This stays in
+    // memory only and is never written to the media cache or console.
+    let capturedTraktApiKey = null;
 
     // Load persistent cache from localStorage
     try {
@@ -434,30 +670,44 @@
       'settings', 'vip', 'home', 'discover', 'me'
     ]);
 
+    // tvtime.trakt.tv is the new TV Time web app. It shares the Trakt design
+    // tokens but uses a different markup (poster-card / summary-page).
+    function isTvTimeHost() {
+      return window.location.hostname === 'tvtime.trakt.tv';
+    }
+
+    function isTraktApiKey(value) {
+      return typeof value === 'string' && /^[a-f0-9]{32,}$/i.test(value);
+    }
+
     /**
-     * Dynamically get Trakt Client ID and Bearer Token from localStorage
+     * Resolve the Trakt API key used for metadata lookups.
+     *
+     * OIDC storage keys have the form "oidc.user:<authority>:<client_id>".
+     * The authority itself contains colons, so splitting on ":" and taking the
+     * third segment used to produce values such as "//auth.trakt.tv". That made
+     * every apiz.trakt.tv request return 403 on og.trakt.tv.
      */
     function getTraktAuth() {
-      let clientId = DEFAULT_CLIENT_ID;
-      let token = null;
+      const fallback = isTvTimeHost() ? TVTIME_CLIENT_ID : DEFAULT_CLIENT_ID;
+      if (capturedTraktApiKey) {
+        return { clientId: capturedTraktApiKey };
+      }
 
       try {
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
           if (key && key.startsWith('oidc.user:')) {
-            const parts = key.split(':');
-            if (parts.length >= 3 && parts[2]) {
-              clientId = parts[2];
-            }
-            const val = JSON.parse(localStorage.getItem(key));
-            if (val && val.access_token) {
-              token = val.access_token;
+            const lastColon = key.lastIndexOf(':');
+            const storedClientId = lastColon >= 0 ? key.slice(lastColon + 1) : '';
+            if (isTraktApiKey(storedClientId)) {
+              return { clientId: storedClientId };
             }
           }
         }
       } catch (e) {}
 
-      return { clientId, token };
+      return { clientId: fallback };
     }
 
     function toInt(value) {
@@ -563,6 +813,9 @@
     }
 
     function isDetailPage() {
+      if (isTvTimeHost()) {
+        return /^\/(shows|movies)\/[^/]+/.test(window.location.pathname);
+      }
       const p = window.location.pathname;
       return /^\/(shows|movies)\/[^/]+(?:\/seasons\/\d+(?:\/episodes\/\d+)?)?\/?$/.test(p);
     }
@@ -626,6 +879,44 @@
         return '在 Infuse 中播放 (电影)';
       }
       return '在 Infuse 中播放';
+    }
+
+    /**
+     * The native "mark as watched" control of the TV Time summary action row.
+     */
+    function findTvTimeTrackAction(container) {
+      return container.querySelector('.watched-pill, .watched-btn');
+    }
+
+    /**
+     * Inject the hero bar button on tvtime.trakt.tv. The summary action row is
+     * rendered per media type, so accept both parents of the ✓ control.
+     */
+    function injectTvTimeDetailPageHeader(ctx) {
+      if (!isTvTimeHost() || !isDetailPage()) return;
+
+      // Single episode pages only render an "Add to history" button, so they
+      // do not offer a native action row to sit next to.
+      if (/\/seasons\/\d+\/episodes\/\d+/.test(window.location.pathname)) return;
+
+      const info = resolveHeroInfo(ctx);
+      if (!info) return;
+      const deepLink = buildInfuseLink(info);
+      if (!deepLink) return;
+
+      const bars = document.querySelectorAll('.summary-actions-row, .summary-aside');
+      for (const bar of bars) {
+        if (bar.closest(SKIP_CONTAINER_SELECTOR)) continue;
+        const isActionRow = bar.classList.contains('summary-actions-row');
+        ensureButton(
+          bar,
+          findTvTimeTrackAction(bar),
+          isActionRow ? 'infuse-summary-btn' : 'infuse-tvtime-aside-btn',
+          deepLink,
+          buildTooltip(info)
+        );
+        return;
+      }
     }
 
     /**
@@ -887,6 +1178,21 @@
       } catch (e) {}
     });
 
+    // Capture only the public API key from real page requests. Tokens and other
+    // authorization headers are deliberately ignored.
+    window.addEventListener('Trakt2Infuse_Headers', (event) => {
+      try {
+        const headers = typeof event.detail === 'string' ? JSON.parse(event.detail) : event.detail;
+        if (!headers || typeof headers !== 'object') return;
+        for (const [name, value] of Object.entries(headers)) {
+          if (name.toLowerCase() === 'trakt-api-key' && isTraktApiKey(value)) {
+            capturedTraktApiKey = value;
+            return;
+          }
+        }
+      } catch (e) {}
+    });
+
     /**
      * Ask the MAIN world interceptor to replay everything it captured before
      * this content script started listening.
@@ -901,44 +1207,275 @@
      * Background fallback fetch using valid client-id and auth token.
      * The slug is always released afterwards so a later pass can retry.
      */
-    async function fetchMediaIdFallback(type, slug) {
+    // Lookup scheduler.
+    //
+    // A poster grid can hold 30-50 uncached titles. Firing one request per title
+    // per injection pass (the pass runs every 2 s) floods the API: Cloudflare
+    // answers the burst with 403/429 and then *every* remaining title fails, which
+    // looks like "only the first few cards ever get a button". So lookups are
+    // queued, spaced out, retried with exponential backoff and de-duplicated.
+    const LOOKUP_CONCURRENCY = 6;
+    const LOOKUP_MIN_GAP_MS = 80;
+    const LOOKUP_TIMEOUT_MS = 10000;
+    const LOOKUP_QUEUE_LIMIT = 300;
+    // Retry delay per failure count (then stay at the last value).
+    const LOOKUP_BACKOFF_MS = [5000, 30000, 120000];
+
+    const lookupState = { active: 0, lastStart: 0 };
+    const lookupQueue = [];          // { type, slug, priority }
+    const lookupFailures = new Map(); // slug -> { count, at }
+
+    function lookupBackoffActive(slug) {
+      const fail = lookupFailures.get(slug);
+      if (!fail) return false;
+      const delay = LOOKUP_BACKOFF_MS[Math.min(fail.count, LOOKUP_BACKOFF_MS.length) - 1];
+      return Date.now() - fail.at < delay;
+    }
+
+    function noteLookupFailure(slug) {
+      const prev = lookupFailures.get(slug);
+      lookupFailures.set(slug, { count: prev ? prev.count + 1 : 1, at: Date.now() });
+    }
+
+    function clearLookupFailure(slug) {
+      lookupFailures.delete(slug);
+    }
+
+    function hasMediaIds(slug) {
+      const entry = mediaCache[slug] || mediaCache[`trakt-${slug}`];
+      return !!(entry && (entry.tmdb || entry.imdb));
+    }
+
+    /**
+     * Queue an id lookup for a slug (no-op when already cached, queued, in flight
+     * or backing off). Visible cards are queued first so the fold resolves first.
+     */
+    function requestMediaLookup(type, slug, priority) {
       if (!slug || BLACKLISTED_SLUGS.has(slug)) return;
+      if (hasMediaIds(slug)) return;
+      if (pendingFetches.has(slug)) return;
+      if (lookupBackoffActive(slug)) return;
 
-      const startedAt = pendingFetches.get(slug);
-      if (startedAt !== undefined && Date.now() - startedAt < PENDING_TTL_MS) return;
-      pendingFetches.set(slug, Date.now());
+      const queued = lookupQueue.find(job => job.slug === slug);
+      if (queued) {
+        if (priority && !queued.priority) {
+          lookupQueue.splice(lookupQueue.indexOf(queued), 1);
+          queued.priority = true;
+          lookupQueue.unshift(queued);
+        }
+        return;
+      }
+      if (lookupQueue.length >= LOOKUP_QUEUE_LIMIT) return;
 
-      const path = type === 'movie' ? 'movies' : 'shows';
+      const job = { type, slug, priority: !!priority };
+      if (job.priority) lookupQueue.unshift(job);
+      else lookupQueue.push(job);
+      pumpLookups();
+    }
+
+    function pumpLookups() {
+      while (lookupState.active < LOOKUP_CONCURRENCY && lookupQueue.length) {
+        const wait = LOOKUP_MIN_GAP_MS - (Date.now() - lookupState.lastStart);
+        if (wait > 0) {
+          setTimeout(pumpLookups, wait);
+          return;
+        }
+
+        const job = lookupQueue.shift();
+        lookupState.active++;
+        lookupState.lastStart = Date.now();
+        pendingFetches.set(job.slug, lookupState.lastStart);
+
+        runLookup(job)
+          .catch(() => {})
+          .then(() => {
+            lookupState.active--;
+            pendingFetches.delete(job.slug);
+            setTimeout(pumpLookups, 0);
+            scheduleInject(120);
+          });
+      }
+    }
+
+    /**
+     * fetch() with an abort-based timeout. Some environments reject an
+     * AbortSignal that comes from another realm (it has happened with the page's
+     * own AbortController), so a rejected signal is retried without one instead of
+     * losing the lookup.
+     */
+    async function timedFetch(url, options) {
+      let controller = null;
+      if (typeof AbortController === 'function') {
+        try { controller = new AbortController(); } catch (e) { controller = null; }
+      }
+      const timer = controller
+        ? setTimeout(() => { try { controller.abort(); } catch (e) {} }, LOOKUP_TIMEOUT_MS)
+        : null;
+
+      try {
+        const withSignal = controller
+          ? Object.assign({}, options, { signal: controller.signal })
+          : options;
+        return await fetch(url, withSignal);
+      } catch (err) {
+        const message = (err && err.message) || '';
+        if (controller && /signal|abort/i.test(message)) {
+          return fetch(url, options);
+        }
+        throw err;
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+    }
+
+    /**
+     * Extension requests go through the background worker, which is not subject
+     * to the page's CORS policy. This also keeps api.trakt.tv fallbacks quiet.
+     */
+    function requestBackgroundLookup(type, slug, clientId) {
+      return new Promise((resolve) => {
+        if (
+          typeof chrome === 'undefined' ||
+          !chrome.runtime ||
+          typeof chrome.runtime.sendMessage !== 'function'
+        ) {
+          resolve(null);
+          return;
+        }
+
+        try {
+          chrome.runtime.sendMessage({
+            action: 'lookupTraktMetadata',
+            type,
+            slug,
+            clientId
+          }, (response) => {
+            // Reading lastError prevents Chrome from logging an unchecked-runtime
+            // error when the service worker was reloaded mid-request.
+            if (chrome.runtime.lastError) {
+              resolve(null);
+              return;
+            }
+            resolve(response || null);
+          });
+        } catch (e) {
+          resolve(null);
+        }
+      });
+    }
+
+    /**
+     * Userscript fallback. Tampermonkey can use GM_xmlhttpRequest to bypass CORS
+     * in the same way that the extension uses its background service worker.
+     */
+    function gmFetchJson(url, headers) {
+      return new Promise((resolve) => {
+        if (typeof GM_xmlhttpRequest !== 'function') {
+          resolve(null);
+          return;
+        }
+
+        try {
+          GM_xmlhttpRequest({
+            method: 'GET',
+            url,
+            headers,
+            timeout: LOOKUP_TIMEOUT_MS,
+            onload(response) {
+              if (response.status >= 200 && response.status < 300) {
+                try {
+                  resolve({ ok: true, status: response.status, data: JSON.parse(response.responseText) });
+                } catch (e) {
+                  resolve({ ok: false, status: response.status, data: null });
+                }
+                return;
+              }
+              resolve({ ok: false, status: response.status, data: null });
+            },
+            onerror() {
+              resolve({ ok: false, status: 0, data: null });
+            },
+            ontimeout() {
+              resolve({ ok: false, status: 0, data: null });
+            }
+          });
+        } catch (e) {
+          resolve(null);
+        }
+      });
+    }
+
+    /**
+     * One lookup: apiz first (the endpoint the Trakt web apps use and the only one
+     * that is reliably reachable), then the public API as a fallback.
+     */
+    async function runLookup(job) {
+      const path = job.type === 'movie' ? 'movies' : 'shows';
+      const { clientId } = getTraktAuth();
+
+      const backgroundResult = await requestBackgroundLookup(job.type, job.slug, clientId);
+      if (backgroundResult) {
+        if (backgroundResult.ok && backgroundResult.data) {
+          processTraktPayload(backgroundResult.data);
+          if (hasMediaIds(job.slug)) {
+            clearLookupFailure(job.slug);
+            return;
+          }
+        }
+        if (backgroundResult.status === 404) return;
+        noteLookupFailure(job.slug);
+        return;
+      }
+
       const endpoints = [
-        `https://apiz.trakt.tv/${path}/${encodeURIComponent(slug)}`,
-        `https://api.trakt.tv/${path}/${encodeURIComponent(slug)}`
+        `https://apiz.trakt.tv/${path}/${encodeURIComponent(job.slug)}`,
+        `https://api.trakt.tv/${path}/${encodeURIComponent(job.slug)}`
       ];
-
-      const { clientId, token } = getTraktAuth();
       const headers = {
-        'Content-Type': 'application/json',
         'trakt-api-version': '2',
         'trakt-api-key': clientId
       };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      try {
-        for (const endpoint of endpoints) {
-          try {
-            const res = await fetch(endpoint, { headers, credentials: 'omit' });
-            if (res && res.ok) {
-              const data = await res.json();
-              processTraktPayload(data);
-              return;
+      for (const endpoint of endpoints) {
+        try {
+          if (typeof GM_xmlhttpRequest === 'function') {
+            const gmResult = await gmFetchJson(endpoint, headers);
+            if (gmResult && gmResult.ok && gmResult.data) {
+              processTraktPayload(gmResult.data);
+              if (hasMediaIds(job.slug)) {
+                clearLookupFailure(job.slug);
+                return;
+              }
             }
-          } catch (e) {
-            // Try the next endpoint
+            if (gmResult && gmResult.status === 404) break;
+            continue;
           }
+
+          const res = await timedFetch(endpoint, { headers, credentials: 'omit' });
+          if (!res) continue;
+          // 404 means the slug itself is wrong: the other host will agree.
+          if (res.status === 404) break;
+          if (!res.ok) continue;
+
+          const data = await res.json();
+          processTraktPayload(data);
+          if (hasMediaIds(job.slug)) {
+            clearLookupFailure(job.slug);
+            return;
+          }
+        } catch (e) {
+          // Network error / timeout: fall through to the next endpoint.
         }
-      } finally {
-        pendingFetches.delete(slug);
-        scheduleInject(200);
       }
+
+      noteLookupFailure(job.slug);
+    }
+
+    /**
+     * Backwards-compatible wrapper used by the id resolvers.
+     */
+    function fetchMediaIdFallback(type, slug, priority) {
+      requestMediaLookup(type, slug, priority);
     }
 
     function lookupShow(slug) {
@@ -997,7 +1534,7 @@
     /**
      * Resolves media info given a URL/path, optional card text and page context.
      */
-    function resolveMediaInfo(urlOrPath, cardText = '', ctx = null) {
+    function resolveMediaInfo(urlOrPath, cardText = '', ctx = null, priority = false) {
       const ref = parseMediaRef(urlOrPath);
       if (!ref) return null;
 
@@ -1015,7 +1552,7 @@
       if (ref.kind === 'movie') {
         const ids = resolveMovieIds(ref.slug, ctx);
         if (!ids.tmdb && !ids.imdb) {
-          fetchMediaIdFallback('movie', ref.slug);
+          fetchMediaIdFallback('movie', ref.slug, priority);
           return null;
         }
         return {
@@ -1029,7 +1566,7 @@
 
       const ids = resolveShowIds(ref.slug, ctx, season, episode);
       if (!ids.tmdb && !ids.imdb) {
-        fetchMediaIdFallback('show', ref.slug);
+        fetchMediaIdFallback('show', ref.slug, priority);
         return null;
       }
 
@@ -1210,6 +1747,8 @@
      * Inject the hero bar button of the detail page.
      */
     function injectDetailPageHeader(ctx) {
+      if (isTvTimeHost()) return;
+
       if (!isDetailPage()) return;
 
       const info = resolveHeroInfo(ctx);
@@ -1254,6 +1793,8 @@
      * the purple "mark as watched" button.
      */
     function injectEpisodeDrawer(ctx) {
+      if (isTvTimeHost()) return;
+
       const drawer = document.querySelector('.trakt-episode-drawer');
       if (!drawer) return;
 
@@ -1285,11 +1826,11 @@
     /**
      * Inject the floating poster badge on a media card.
      */
-    function injectCardBadge(card, info) {
+    function injectCardBadge(card, info, preferredHost) {
       const deepLink = buildInfuseLink(info);
       if (!deepLink) return false;
 
-      const host = coverHostFor(card);
+      const host = preferredHost || coverHostFor(card);
       if (!host) return false;
 
       const existing = card.querySelector('.infuse-poster-floating-btn');
@@ -1311,6 +1852,13 @@
      * Media card containers (app.trakt.tv and the legacy trakt.tv markup).
      */
     const CARD_SELECTOR = '.trakt-card, .mini_card, .grid-item, [data-card]';
+
+    /**
+     * TV Time poster card. The frame holds the poster and the native ✓ button;
+     * the badge anchors to it so it stays on the artwork even when the layout
+     * wraps.
+     */
+    const TVTIME_CARD_SELECTOR = '.poster-card';
 
     /**
      * How specific a card link is: episode > season > show / movie. A card that
@@ -1364,6 +1912,342 @@
     }
 
     /**
+     * TV Time poster cards: every card gets one floating badge on its artwork,
+     * exactly like the app.trakt.tv cards above.
+     */
+    function injectTvTimeMediaCards(ctx) {
+      if (!isTvTimeHost()) return;
+
+      document.querySelectorAll(TVTIME_CARD_SELECTOR).forEach(card => {
+        if (card.querySelector('.infuse-poster-floating-btn')) return;
+
+        const frame = card.querySelector('.poster-frame');
+        if (!frame) return;
+
+        const mediaLinks = [...card.querySelectorAll('a[href]')].filter(link =>
+          parseMediaRef(link.getAttribute('href'))
+        );
+        if (!mediaLinks.length) return;
+
+        let bestRank = -1;
+        for (const link of mediaLinks) {
+          const rank = refSpecificity(parseMediaRef(link.getAttribute('href')));
+          if (rank > bestRank) bestRank = rank;
+        }
+        if (bestRank < 0) return;
+
+        const cardText = card.textContent || '';
+
+        for (const link of mediaLinks) {
+          const href = link.getAttribute('href');
+          if (refSpecificity(parseMediaRef(href)) !== bestRank) continue;
+
+          const info = resolveMediaInfo(href, cardText, ctx);
+          if (!info) return;
+
+          if (injectCardBadge(card, info, frame)) return;
+        }
+      });
+    }
+
+    // ---------------------------------------------------------------------------
+    // og.trakt.tv — "Trakt OG Redux" (the classic theme)
+    //
+    // This theme is deliberately poster-first, so nothing is ever overlaid on
+    // artwork. Every media card already ends with a native action strip
+    // (`.quick-icons`: ✓ / list / … on the left, the ❤️ rating on the right) and
+    // the Infuse button becomes one more glyph in that strip, immediately left of
+    // the rating. Rows without a strip reuse their own local language:
+    //   • hero action rows   -> icon the size of the neighbouring .glass-action
+    //   • schedule cards     -> bare glyph left of "Watch Now"
+    //   • calendar week rows -> bare glyph appended to the tag row
+    // ---------------------------------------------------------------------------
+
+    function isOgHost() {
+      return window.location.hostname === 'og.trakt.tv';
+    }
+
+    function ogInSkippedContainer(el) {
+      const skipped = el.closest(SKIP_CONTAINER_SELECTOR);
+      // Discover's Trending Comments section is called `.comments`, but it also
+      // owns a normal PosterCard. Only the generic link pass should skip a
+      // comments container; OG's explicit card/strip selectors are safe inside.
+      return !!skipped && !skipped.matches('.comments');
+    }
+
+    /**
+     * Parse the structured media key OG Redux writes on every title element:
+     *   episode:<slug>:<season>:<episode> | season:<slug>:<season>
+     *   show:<slug> | movie:<slug>
+     * Locale-independent, so it is always preferred over link sniffing.
+     */
+    function parseOgRef(value) {
+      if (!value) return null;
+
+      const parts = String(value).split(':');
+      if (parts.length < 2) return null;
+
+      const kind = parts[0];
+      let slug = parts[1];
+      try {
+        slug = decodeURIComponent(slug);
+      } catch (e) {}
+      if (!slug || BLACKLISTED_SLUGS.has(slug)) return null;
+
+      if (kind === 'episode') {
+        const season = toInt(parts[2]);
+        const episode = toInt(parts[3]);
+        if (season === null || episode === null) return null;
+        return { kind: 'show', slug, season, episode };
+      }
+      if (kind === 'season') {
+        const season = toInt(parts[2]);
+        return season === null ? null : { kind: 'show', slug, season, episode: null };
+      }
+      if (kind === 'show') return { kind: 'show', slug, season: null, episode: null };
+      if (kind === 'movie') return { kind: 'movie', slug, season: null, episode: null };
+      return null;
+    }
+
+    function ogRefFromElement(el) {
+      if (!el || !el.getAttribute) return null;
+      return parseOgRef(el.getAttribute('data-trakt-og-key')) ||
+        parseMediaRef(el.getAttribute('href'));
+    }
+
+    /**
+     * Most specific media reference inside a card: episode > season > show/movie.
+     * The structured key wins because it carries the season/episode even when the
+     * card itself links to the show.
+     */
+    function ogRefsIn(container) {
+      const refs = [];
+      container.querySelectorAll('[data-trakt-og-key]').forEach(el => {
+        const ref = ogRefFromElement(el);
+        if (ref) refs.push(ref);
+      });
+      container.querySelectorAll('a[href]').forEach(link => {
+        const ref = ogRefFromElement(link);
+        if (ref) refs.push(ref);
+      });
+      return refs;
+    }
+
+    function ogMostSpecificRef(refs) {
+      let best = null;
+      let bestRank = -1;
+      refs.forEach(ref => {
+        const rank = refSpecificity(ref);
+        if (rank > bestRank) {
+          bestRank = rank;
+          best = ref;
+        }
+      });
+      return best;
+    }
+
+    function ogMediaIdentity(ref) {
+      return ref ? `${ref.kind}:${ref.slug}` : '';
+    }
+
+    function ogBestRef(container) {
+      const refs = ogRefsIn(container);
+      const best = ogMostSpecificRef(refs);
+      // Nothing beats an episode reference, so the link pass can be skipped then.
+      if (best && refSpecificity(best) >= 3) return best;
+      return best;
+    }
+
+    function ogRefToPath(ref) {
+      const slug = encodeURIComponent(ref.slug);
+      if (ref.kind === 'movie') return `/movies/${slug}`;
+      if (ref.episode !== null && ref.episode !== undefined) {
+        return `/shows/${slug}/seasons/${ref.season}/episodes/${ref.episode}`;
+      }
+      if (ref.season !== null && ref.season !== undefined) {
+        return `/shows/${slug}/seasons/${ref.season}`;
+      }
+      return `/shows/${slug}`;
+    }
+
+    /**
+     * Cards near the viewport are resolved first; the rest of the grid is
+     * prefetched at the scheduler's pace so scrolling stays instant.
+     */
+    function ogIsVisible(el) {
+      if (!el || typeof el.getBoundingClientRect !== 'function') return true;
+      const rect = el.getBoundingClientRect();
+      const viewport = window.innerHeight || 0;
+      return rect.bottom > -200 && rect.top < viewport + 600;
+    }
+
+    function ogDeepLink(container, ctx) {
+      const ref = ogBestRef(container);
+      if (!ref) return null;
+
+      // Season/episode is always encoded in the key or the href here, so the
+      // visible text must never be used as a fallback: a show card can mention
+      // "1x08" in its activity line without linking to that episode.
+      const info = resolveMediaInfo(ogRefToPath(ref), '', ctx, ogIsVisible(container));
+      if (!info) return null;
+
+      const deepLink = buildInfuseLink(info);
+      return deepLink ? { info, deepLink } : null;
+    }
+
+    /**
+     * Nearest ancestor that describes a media item. Detail and episode pages put
+     * their action row in a header wrapper that does not itself hold the title, so
+     * the lookup walks up a few levels instead of guessing a single selector.
+     */
+    function ogAncestorDeepLink(node, ctx, maxDepth = 5) {
+      let el = node;
+      for (let depth = 0; el && depth <= maxDepth; depth++, el = el.parentElement) {
+        if (el === document.body || el === document.documentElement) break;
+        const resolved = ogDeepLink(el, ctx);
+        if (resolved) return resolved;
+      }
+      return null;
+    }
+
+    /**
+     * Some OG hero charts put the action strip and the title in sibling wrappers.
+     * Walk up only while the ancestor still describes one title; crossing a grid
+     * with many media keys would attach the first cached title's link to the wrong
+     * card.
+     */
+    function ogSingleTitleAncestorDeepLink(node, ctx, maxDepth = 8) {
+      let el = node;
+      for (let depth = 0; el && depth <= maxDepth; depth++, el = el.parentElement) {
+        if (el === document.body || el === document.documentElement) break;
+        const refs = ogRefsIn(el);
+        const identities = new Set(refs.map(ogMediaIdentity));
+        if (identities.size > 1) return null;
+        if (identities.size !== 1) continue;
+
+        const ref = ogMostSpecificRef(refs);
+        const info = resolveMediaInfo(ogRefToPath(ref), '', ctx, ogIsVisible(el));
+        const deepLink = info && buildInfuseLink(info);
+        if (deepLink) return { info, deepLink };
+      }
+      return null;
+    }
+
+    /**
+     * The card that owns a `.quick-icons` strip.
+     */
+    function ogCardForStrip(strip) {
+      return strip.closest('article, li, .poster-card, .fanart-card, .on-deck-card, .card') ||
+        strip.parentElement;
+    }
+
+    /**
+     * The child of `row` that holds the ❤️ rating (the strip is space-between, so
+     * the new glyph is inserted right before it and pushes itself over with an
+     * auto margin in CSS).
+     */
+    function ogRatingChild(row) {
+      return [...row.children].find(child =>
+        child.matches('.rating-trigger, .percentage, .rating') ||
+        !!child.querySelector('.rating-trigger, .percentage')
+      ) || null;
+    }
+
+    /**
+     * Media cards: one Infuse glyph in the native quick-icons strip.
+     */
+    function injectOgQuickIcons(ctx) {
+      document.querySelectorAll('.quick-icons').forEach(strip => {
+        if (ogInSkippedContainer(strip)) return;
+
+        const card = ogCardForStrip(strip);
+        if (!card) return;
+
+        const resolved = ogDeepLink(card, ctx) ||
+          ogSingleTitleAncestorDeepLink(strip, ctx, 5);
+        if (!resolved) return;
+
+        const tooltip = buildTooltip(resolved.info);
+        const existing = strip.querySelector('.infuse-quick-btn');
+        if (existing) {
+          updateInfuseButton(existing, resolved.deepLink, tooltip);
+          return;
+        }
+
+        const btn = createInfuseButton(resolved.deepLink, 'infuse-quick-btn', tooltip);
+        const rating = ogRatingChild(strip);
+        if (rating) strip.insertBefore(btn, rating);
+        else strip.appendChild(btn);
+      });
+    }
+
+    /**
+     * Hero rows: details pages and the recommendation spotlight use the same
+     * `.glass-action` pill row, so the Infuse button takes that shape.
+     */
+    function injectOgActionRows(ctx) {
+      document.querySelectorAll('.actions').forEach(row => {
+        if (ogInSkippedContainer(row)) return;
+        if (row.closest('.quick-icons')) return;
+        if (!row.querySelector('.glass-action, .button')) return;
+
+        const resolved = ogSingleTitleAncestorDeepLink(row, ctx);
+        if (!resolved) return;
+
+        // A chart/season hero already exposes its quick-icon strip. Do not put a
+        // second Infuse control beside the same title, but still handle heroes
+        // that only render text buttons (notably Discover's season carousel).
+        const mediaScope = row.closest('article, section') || row.parentElement;
+        if (mediaScope && mediaScope.querySelector('.quick-icons')) return;
+
+        const tooltip = buildTooltip(resolved.info);
+        const existing = row.querySelector('.infuse-glass-btn');
+        if (existing) {
+          updateInfuseButton(existing, resolved.deepLink, tooltip);
+          return;
+        }
+
+        const btn = createInfuseButton(resolved.deepLink, 'infuse-glass-btn', tooltip);
+        const rating = ogRatingChild(row);
+        if (rating) row.insertBefore(btn, rating);
+        else row.appendChild(btn);
+      });
+    }
+
+    /**
+     * Rows without an action strip: upcoming schedule cards and the calendar week
+     * list. Both render a `.tags` pill row, which is the quietest place for a
+     * bare glyph — the primary "Watch Now" CTA is never touched.
+     */
+    function injectOgInline(ctx) {
+      document.querySelectorAll('li .tags, article.card .tags').forEach(tags => {
+        if (ogInSkippedContainer(tags)) return;
+
+        const row = tags.closest('li, article.card');
+        if (!row) return;
+
+        const resolved = ogDeepLink(row, ctx);
+        if (!resolved) return;
+
+        const tooltip = buildTooltip(resolved.info);
+        const existing = row.querySelector('.infuse-mini-btn');
+        if (existing) {
+          updateInfuseButton(existing, resolved.deepLink, tooltip);
+          return;
+        }
+
+        tags.appendChild(createInfuseButton(resolved.deepLink, 'infuse-mini-btn', tooltip));
+      });
+    }
+
+    function injectOgMediaCards(ctx) {
+      if (!isOgHost()) return;
+      try { injectOgQuickIcons(ctx); } catch (e) {}
+      try { injectOgActionRows(ctx); } catch (e) {}
+      try { injectOgInline(ctx); } catch (e) {}
+    }
+
+    /**
      * Containers that already own their layout; media links inside them are
      * skipped by the generic link pass.
      */
@@ -1389,6 +2273,8 @@
      * `.trakt-calendar-poster-tile` (a plain link + image) instead of a card.
      */
     function injectLinkedPosterBadges(ctx) {
+      if (isTvTimeHost()) return;
+
       const links = document.querySelectorAll('a[href*="/shows/"], a[href*="/movies/"]');
 
       links.forEach(link => {
@@ -1428,10 +2314,19 @@
     function injectInfuseUI() {
       const ctx = getPageContext();
 
+      // og.trakt.tv has its own injection model: the buttons live inside the
+      // card chrome, and no artwork is ever covered.
+      if (isOgHost()) {
+        injectOgMediaCards(ctx);
+        return;
+      }
+
       try { injectDetailPageHeader(ctx); } catch (e) {}
       try { injectEpisodeDrawer(ctx); } catch (e) {}
       try { injectAllMediaCards(ctx); } catch (e) {}
       try { injectLinkedPosterBadges(ctx); } catch (e) {}
+      try { injectTvTimeDetailPageHeader(ctx); } catch (e) {}
+      try { injectTvTimeMediaCards(ctx); } catch (e) {}
     }
 
     /**

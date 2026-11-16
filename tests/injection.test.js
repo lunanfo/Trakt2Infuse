@@ -15,11 +15,18 @@ const { spawnSync } = require('child_process');
 if (!process.env.TARGET) {
   let failed = false;
   for (const target of ['extension', 'userscript']) {
-    const result = spawnSync(process.execPath, [__filename], {
-      stdio: 'inherit',
-      env: { ...process.env, TARGET: target }
-    });
-    if (result.status !== 0) failed = true;
+    for (const mode of ['app', 'tvtime', 'og']) {
+      const result = spawnSync(process.execPath, [__filename], {
+        stdio: 'inherit',
+        env: {
+          ...process.env,
+          TARGET: target,
+          ...(mode === 'tvtime' ? { TVTIME: '1' } : {}),
+          ...(mode === 'og' ? { OG: '1' } : {})
+        }
+      });
+      if (result.status !== 0) failed = true;
+    }
   }
   process.exit(failed ? 1 : 0);
 }
@@ -41,7 +48,14 @@ const SOURCE = TARGET === 'userscript'
   : path.join(ROOT, 'extension/content.js');
 const CONTENT_JS = fs.readFileSync(SOURCE, 'utf8');
 
-const PAGE_URL = 'https://app.trakt.tv/shows/silo?season=3&view=episode&episode=2';
+const HOST = process.env.OG
+  ? 'https://og.trakt.tv'
+  : (process.env.TVTIME ? 'https://tvtime.trakt.tv' : 'https://app.trakt.tv');
+const PAGE_URL = process.env.OG
+  ? `${HOST}/dashboard`
+  : (process.env.TVTIME
+    ? `${HOST}/shows/silo`
+    : `${HOST}/shows/silo?season=3&view=episode&episode=2`);
 
 function card({ href, footer = true, title = 'x', subtitle = '', summary = false, seasonItem = false }) {
   const cover = `
@@ -73,7 +87,208 @@ function card({ href, footer = true, title = 'x', subtitle = '', summary = false
   </div>`;
 }
 
-const html = `<!doctype html><html><head></head><body>
+/**
+ * Real og.trakt.tv ("Trakt OG Redux") markup: every media card owns a native
+ * `.quick-icons` strip (✓ / list / … | ❤ rating). The poster is a plain image
+ * link, and schedule cards / calendar week rows carry no strip at all.
+ */
+const OG_FIXTURE = `
+<div class="poster-grid">
+  <div>
+    <div class="on-deck-card">
+      <article class="poster-card framed with-icons">
+        <div class="poster-wrapper">
+          <a class="poster poster" href="/shows/black-doves/seasons/2/episodes/4" tabindex="-1" aria-hidden="true">
+            <img class="image" src="https://media.trakt.tv/shows/204762/thumb/poster.webp" alt="" />
+          </a>
+        </div>
+        <div class="quick-icons small">
+          <div class="actions">
+            <div class="tools">
+              <div class="watch-control card small">
+                <button type="button" class="watch-trigger" aria-label="Add to watched history">✓</button>
+              </div>
+              <div class="list-control card small">
+                <button type="button" class="trigger" aria-label="Add to list">☰</button>
+              </div>
+            </div>
+            <div class="more-group">
+              <button type="button" class="action more" aria-label="More">⋯</button>
+            </div>
+          </div>
+          <button type="button" class="rating-trigger card locked" aria-label="Rate Black Doves 2x04">
+            <span class="percentage"><span class="heart">♥</span><span class="value">83%</span></span>
+          </button>
+        </div>
+        <div class="titles detached-progress">
+          <a class="titles-link" href="/shows/black-doves/seasons/2/episodes/4">
+            <h3 data-trakt-og-key="episode:black-doves:2:4" data-trakt-og-original="2x04 The Opportunity to Become Savage">2x04 野性觉醒的机会</h3>
+          </a>
+          <div class="show-line">
+            <a class="show-link" href="/shows/black-doves" data-trakt-og-key="show:black-doves">黑鸽</a>
+          </div>
+        </div>
+      </article>
+    </div>
+  </div>
+
+  <article class="poster-card framed with-icons">
+    <div class="poster-wrapper">
+      <a class="poster poster" href="/shows/black-doves">
+        <img class="image" src="https://media.trakt.tv/shows/204762/thumb/poster.webp" alt="" />
+      </a>
+    </div>
+    <div class="quick-icons small">
+      <div class="actions">
+        <button type="button" class="action watch-now" aria-label="Watch now">▶</button>
+      </div>
+      <button type="button" class="rating-trigger card locked" aria-label="Rate Black Doves">
+        <span class="percentage"><span class="heart">♥</span><span class="value">78%</span></span>
+      </button>
+    </div>
+    <div class="titles">
+      <a class="titles-link" href="/shows/black-doves">
+        <h3 data-trakt-og-key="show:black-doves">黑鸽</h3>
+      </a>
+    </div>
+  </article>
+
+  <article class="poster-card framed with-icons">
+    <div class="poster-wrapper">
+      <a class="poster poster" href="/movies/deadpool-2016">
+        <img class="image" src="https://media.trakt.tv/movies/190430/thumb/poster.webp" alt="" />
+      </a>
+    </div>
+    <div class="quick-icons small">
+      <div class="actions"></div>
+      <button type="button" class="rating-trigger card locked" aria-label="Rate Deadpool">
+        <span class="percentage"><span class="heart">♥</span><span class="value">81%</span></span>
+      </button>
+    </div>
+    <div class="titles">
+      <a class="titles-link" href="/movies/deadpool-2016">
+        <h3 data-trakt-og-key="movie:deadpool-2016">死侍</h3>
+      </a>
+    </div>
+  </article>
+
+  <article class="fanart-card framed with-icons">
+    <div class="fanart fanart">
+      <a class="image-link" href="/shows/black-doves/seasons/2/episodes/3">
+        <img class="image" src="https://media.trakt.tv/episodes/14520576/thumb/screenshot.webp" alt="" />
+      </a>
+      <div class="titles">
+        <a class="titles-link small-title" href="/shows/black-doves">Black Doves</a>
+        <h3 data-trakt-og-key="episode:black-doves:2:3"><a href="/shows/black-doves/seasons/2/episodes/3">P 表示毒药</a></h3>
+      </div>
+    </div>
+    <div class="quick-icons">
+      <div class="actions">
+        <button type="button" class="action watch-now" aria-label="Watch now">▶</button>
+      </div>
+      <button type="button" class="rating-trigger card" aria-label="Rate P Is for Poison">
+        <span class="percentage"><span class="heart">♥</span><span class="value">81%</span></span>
+      </button>
+    </div>
+  </article>
+</div>
+
+<article class="spotlight" aria-labelledby="spotlight-1">
+  <div class="body">
+    <h3 data-trakt-og-key="show:black-doves"><a href="/shows/black-doves">黑鸽</a><span class="year">2024</span></h3>
+    <div class="actions">
+      <button type="button" class="glass-action tinted">Add to Watchlist</button>
+      <button type="button" class="glass-action">Watch now</button>
+      <span class="rating"><button type="button" class="rating-trigger card locked">♥ 84%</button></span>
+    </div>
+  </div>
+</article>
+
+<section class="chart-hero">
+  <div class="inner">
+    <h2 data-trakt-og-key="show:black-doves"><a href="/shows/black-doves">黑鸽</a></h2>
+    <div class="art">
+      <div class="tools">
+        <div class="quick-icons">
+          <div class="actions"></div>
+          <button type="button" class="rating-trigger card"><span class="heart">♥</span> 84%</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="hero discover-hero">
+  <div class="inner">
+    <h2 class="name" data-trakt-og-key="show:black-doves"><a href="/shows/black-doves">黑鸽</a></h2>
+    <div class="actions">
+      <a class="button primary" href="/shows/black-doves">More info</a>
+      <a class="button secondary" href="https://www.youtube.com/watch?v=test">Trailer</a>
+    </div>
+  </div>
+</section>
+
+<section class="comments discover-comments">
+  <article class="poster-card framed with-icons">
+    <div class="poster-wrapper">
+      <a class="poster poster" href="/shows/black-doves/seasons/2/episodes/7">
+        <img class="image" src="https://media.trakt.tv/episodes/14520579/thumb/screenshot.webp" alt="" />
+      </a>
+    </div>
+    <div class="quick-icons small">
+      <div class="actions"></div>
+      <button type="button" class="rating-trigger card locked">
+        <span class="percentage"><span class="heart">♥</span><span class="value">80%</span></span>
+      </button>
+    </div>
+    <div class="titles">
+      <a class="titles-link" href="/shows/black-doves/seasons/2/episodes/7">
+        <h3 data-trakt-og-key="episode:black-doves:2:7">2x07 评论中的海报卡</h3>
+      </a>
+    </div>
+  </article>
+</section>
+
+<article class="card schedule-card">
+  <img class="poster" src="https://media.trakt.tv/shows/204762/thumb/poster.webp" alt="" />
+  <div class="text">
+    <h4><a href="/shows/black-doves" data-trakt-og-key="show:black-doves">黑鸽</a></h4>
+    <div class="episodes">
+      <div class="line"><a href="/shows/black-doves/seasons/2/episodes/5"><b class="number">2x05</b> 下一步</a></div>
+    </div>
+    <span class="tags"><span class="card-tag primary">09:00</span></span>
+    <button type="button" class="watch-now">Watch Now</button>
+  </div>
+</article>
+
+<article class="poster-card framed with-icons" id="uncached-card">
+  <div class="poster-wrapper">
+    <a class="poster poster" href="/shows/severance">
+      <img class="image" src="https://media.trakt.tv/shows/155534/thumb/poster.webp" alt="" />
+    </a>
+  </div>
+  <div class="quick-icons small">
+    <div class="actions"></div>
+    <button type="button" class="rating-trigger card locked">
+      <span class="percentage"><span class="heart">♥</span><span class="value">88%</span></span>
+    </button>
+  </div>
+  <div class="titles"><h3 data-trakt-og-key="show:severance">人生切割术</h3></div>
+</article>
+
+<ul class="week">
+  <li class="row">
+    <img class="poster" src="https://media.trakt.tv/shows/204762/thumb/poster.webp" alt="" />
+    <span class="text">
+      <a class="show" href="/shows/black-doves" data-trakt-og-key="show:black-doves">黑鸽</a>
+      <div class="line"><a href="/shows/black-doves/seasons/2/episodes/6"><b class="number">2x06</b> TBA</a></div>
+      <span class="tags"><span class="card-tag primary">16:00</span></span>
+    </span>
+  </li>
+</ul>
+`;
+
+const html = `<!doctype html><html><head></head><body>${process.env.OG ? OG_FIXTURE : ''}
 <main>
   <div class="trakt-summary-container">
     <div class="trakt-summary-content">
@@ -88,18 +303,17 @@ const html = `<!doctype html><html><head></head><body>
   </div>
 
   <!-- season row on the page -->
-  ${card({ href: '/shows/silo?season=0', seasonItem: true, title: '特别篇', subtitle: '' })}
+  ${process.env.TVTIME ? '' : card({ href: '/shows/silo?season=0', seasonItem: true, title: '特别篇', subtitle: '' })}
   ${card({ href: '/shows/silo?season=3', seasonItem: true, title: '第 3 季', subtitle: '' })}
 
   <!-- current season episode list -->
-  ${card({ href: '/shows/silo?view=episode&season=3&episode=1', subtitle: '第 3 季 • 第 1 集' })}
-  ${card({ href: '/shows/silo?view=episode&season=3&episode=2', subtitle: '第 3 季 • 第 2 集' })}
-  ${card({ href: '/shows/silo?view=episode&season=3&episode=3', footer: false, subtitle: '第 3 季 • 第 3 集' })}
+  ${process.env.TVTIME ? '' : card({ href: '/shows/silo?view=episode&season=3&episode=1', subtitle: '第 3 季 • 第 1 集' })}
+  ${process.env.TVTIME ? '' : card({ href: '/shows/silo?view=episode&season=3&episode=2', subtitle: '第 3 季 • 第 2 集' })}
+  ${process.env.TVTIME ? '' : card({ href: '/shows/silo?view=episode&season=3&episode=3', footer: false, subtitle: '第 3 季 • 第 3 集' })}
 
   <!-- a card whose show is not cached yet -->
-  ${card({ href: '/shows/unknown-show?view=episode&season=1&episode=1', subtitle: '第 1 季 • 第 1 集' })}
-  <!-- a calendar-style card linking to the episode and its show -->
-  <div class="trakt-season-episode-item">
+  ${process.env.TVTIME ? '' : card({ href: '/shows/unknown-show?view=episode&season=1&episode=1', subtitle: '第 1 季 • 第 1 集' })}
+  ${process.env.TVTIME ? '' : `<div class="trakt-season-episode-item">
     <div class="trakt-card trakt-summary-card trakt-summary-card-minimal">
       <div class="trakt-card-content">
         <a class="trakt-link" href="/shows/silo?view=episode&season=2&episode=5">
@@ -114,8 +328,9 @@ const html = `<!doctype html><html><head></head><body>
       </div>
     </div>
   </div>
+`}
 
-  <!-- releases/calendar WEEK view: CalendarPosterTile, not a .trakt-card -->
+  ${process.env.TVTIME ? '' : `<!-- releases/calendar WEEK view: CalendarPosterTile, not a .trakt-card -->
   <section class="trakt-calendar-week">
     <div class="week-days">
       <div class="week-day">
@@ -153,6 +368,7 @@ const html = `<!doctype html><html><head></head><body>
       </div>
     </div>
   </section>
+`}
 </main>
 
 <!-- seasons drawer, portaled to body -->
@@ -191,6 +407,43 @@ const html = `<!doctype html><html><head></head><body>
     </div>
   </div>
 </div>
+${process.env.TVTIME ? `<div class="summary-page">
+  <div class="summary-content summary-split">
+    <div class="summary-main">
+      <div class="summary-header">
+        <img class="summary-header-poster" src="poster.jpg" />
+        <div class="summary-info">
+          <h1 class="summary-title">Silo</h1>
+          <div class="summary-meta"><span>Sci-Fi</span></div>
+        </div>
+      </div>
+      <div class="summary-actions-row">
+        <button type="button" class="watched-pill">✓ Watched</button>
+        <button type="button" class="watchlist-btn">＋ Watchlist</button>
+      </div>
+    </div>
+    <aside class="summary-aside">
+      <img class="summary-aside-poster" src="aside.jpg" />
+      <dl class="media-details"></dl>
+    </aside>
+  </div>
+</div>
+<div class="poster-grid" role="list">
+  <div class="poster-card">
+    <div class="poster-frame">
+      <a href="/shows/silo"><img class="trakt-fly-to-tab" src="card-show.jpg" /></a>
+      <button type="button" class="action-btn">＋</button>
+    </div>
+    <p class="poster-title">Silo</p>
+  </div>
+  <div class="poster-card">
+    <div class="poster-frame">
+      <a href="/movies/some-movie"><img class="trakt-fly-to-tab" src="card-movie.jpg" /></a>
+      <button type="button" class="action-btn">＋</button>
+    </div>
+    <p class="poster-title">Some Movie</p>
+  </div>
+</div>` : ''}
 </body></html>`;
 
 const dom = new JSDOM(html, {
@@ -207,10 +460,15 @@ window.GM_addStyle = () => {};
 
 const showPayload = { slug: 'unknown-show', title: 'Unknown', ids: { trakt: 9, slug: 'unknown-show', tmdb: 777, imdb: 'tt777' } };
 const fetchCalls = [];
-window.fetch = async (url) => {
+const fetchOptions = [];
+window.fetch = async (url, options) => {
   fetchCalls.push(String(url));
+  fetchOptions.push({ url: String(url), options });
   if (String(url).includes('unknown-show')) {
     return { ok: true, json: async () => showPayload };
+  }
+  if (String(url).includes('severance')) {
+    return { ok: true, json: async () => ({ ids: { trakt: 155534, slug: 'severance', tmdb: 95396, imdb: 'tt11280740' } }) };
   }
   return { ok: false, json: async () => ({}) };
 };
@@ -219,8 +477,17 @@ window.localStorage.setItem(
   'trakt2infuse_media_cache',
   JSON.stringify({
     silo: { tmdb: 12345, imdb: 'tt123', slug: 'silo', type: 'show', title: 'Silo' },
-    'some-movie': { tmdb: 4242, imdb: 'tt4242', slug: 'some-movie', type: 'movie', title: 'Some Movie' }
+    'some-movie': { tmdb: 4242, imdb: 'tt4242', slug: 'some-movie', type: 'movie', title: 'Some Movie' },
+    // og.trakt.tv fixture titles
+    'black-doves': { tmdb: 218313, imdb: 'tt2901718', slug: 'black-doves', type: 'show', title: 'Black Doves' },
+    'deadpool-2016': { tmdb: 293660, imdb: 'tt1431045', slug: 'deadpool-2016', type: 'movie', title: 'Deadpool' }
   })
+);
+// Mirrors the real OG page. The authority contains colons, so taking the third
+// segment of this key would incorrectly produce "//auth.trakt.tv".
+window.localStorage.setItem(
+  'oidc.user:https://auth.trakt.tv:trakt-web',
+  JSON.stringify({ access_token: 'test-token-must-not-be-used-for-metadata' })
 );
 
 // --- run the content script --------------------------------------------------
@@ -242,6 +509,146 @@ function assert(cond, message) {
 
   const doc = window.document;
   const href = (el) => el && el.getAttribute('href');
+
+  if (process.env.OG) {
+    // og.trakt.tv: the button lives in the card's own action strip and the
+    // poster is never covered.
+    const strips = [...doc.querySelectorAll('.quick-icons')];
+    assert(strips.length === 7, `og: found ${strips.length} quick-icons strips`);
+
+    const cardOf = (hrefSelector) => [...doc.querySelectorAll('.poster-card, .fanart-card')]
+      .find((c) => c.querySelector(hrefSelector));
+
+    const episodeCard = cardOf('a[href="/shows/black-doves/seasons/2/episodes/4"]');
+    const episodeBtn = episodeCard && episodeCard.querySelector('.quick-icons .infuse-quick-btn');
+    assert(!!episodeBtn, 'og: up-next card gets a glyph in the action strip');
+    assert(episodeBtn && href(episodeBtn) === 'infuse://series/218313-2-4',
+      `og: episode deep link from the structured key (${episodeBtn && href(episodeBtn)})`);
+    assert(episodeBtn && episodeBtn.nextElementSibling &&
+      episodeBtn.nextElementSibling.classList.contains('rating-trigger'),
+      'og: glyph sits immediately left of the ❤️ rating');
+
+    const showCard = cardOf('a[href="/shows/black-doves"]:not(.show-link)');
+    const showBtn = showCard && showCard.querySelector('.infuse-quick-btn');
+    assert(showBtn && href(showBtn) === 'infuse://series/218313',
+      `og: show card deep link (${showBtn && href(showBtn)})`);
+
+    const movieCard = cardOf('a[href="/movies/deadpool-2016"]');
+    const movieBtn = movieCard && movieCard.querySelector('.infuse-quick-btn');
+    assert(movieBtn && href(movieBtn) === 'infuse://movie/293660',
+      `og: movie card deep link (${movieBtn && href(movieBtn)})`);
+
+    const fanartCard = cardOf('.image-link');
+    const fanartBtn = fanartCard && fanartCard.querySelector('.infuse-quick-btn');
+    assert(fanartBtn && href(fanartBtn) === 'infuse://series/218313-2-3',
+      `og: fanart card keeps episode specificity (${fanartBtn && href(fanartBtn)})`);
+
+    const chartHeroBtn = doc.querySelector('.chart-hero .quick-icons .infuse-quick-btn');
+    assert(chartHeroBtn && href(chartHeroBtn) === 'infuse://series/218313',
+      `og: hero chart finds the title in a sibling wrapper (${chartHeroBtn && href(chartHeroBtn)})`);
+    assert(!doc.querySelector('.chart-hero .infuse-glass-btn'),
+      'og: chart hero does not get a duplicate action-row button');
+
+    assert(!doc.querySelector('.infuse-poster-floating-btn'),
+      'og: no badge is ever placed on a poster');
+    assert(strips.every((s) => s.parentElement.querySelectorAll('.quick-icons .infuse-quick-btn').length <= 1),
+      'og: at most one glyph per action strip');
+
+    const heroRow = doc.querySelector('article.spotlight .actions');
+    const heroBtn = heroRow && heroRow.querySelector('.infuse-glass-btn');
+    assert(!!heroBtn, 'og: recommendation spotlight gets a hero button');
+    assert(heroBtn && href(heroBtn) === 'infuse://series/218313',
+      `og: spotlight deep link (${heroBtn && href(heroBtn)})`);
+    assert(heroBtn && heroBtn.nextElementSibling && heroBtn.nextElementSibling.classList.contains('rating'),
+      'og: spotlight button sits before the rating');
+
+    const discoverHeroBtn = doc.querySelector('.discover-hero .actions .infuse-glass-btn');
+    assert(discoverHeroBtn && href(discoverHeroBtn) === 'infuse://series/218313',
+      `og: text-only discover hero gets an Infuse button (${discoverHeroBtn && href(discoverHeroBtn)})`);
+    assert(discoverHeroBtn && discoverHeroBtn.previousElementSibling &&
+      discoverHeroBtn.previousElementSibling.classList.contains('secondary'),
+      'og: discover hero button follows its native text actions');
+
+    const commentsBtn = doc.querySelector('.discover-comments .infuse-quick-btn');
+    assert(commentsBtn && href(commentsBtn) === 'infuse://series/218313-2-7',
+      `og: media card inside Discover's comments section is not skipped (${commentsBtn && href(commentsBtn)})`);
+
+    const scheduleCard = doc.querySelector('article.schedule-card');
+    const scheduleMini = scheduleCard && scheduleCard.querySelector('.tags .infuse-mini-btn');
+    assert(!!scheduleMini, 'og: schedule card glyph appended to its tag row');
+    assert(scheduleMini && href(scheduleMini) === 'infuse://series/218313-2-5',
+      `og: schedule card deep link (${scheduleMini && href(scheduleMini)})`);
+    const scheduleWatchNow = scheduleCard && scheduleCard.querySelector('.watch-now');
+    const watchNowSibling = scheduleWatchNow && scheduleWatchNow.previousElementSibling;
+    assert(scheduleWatchNow && !scheduleWatchNow.querySelector('.infuse-icon-injected') &&
+      !(watchNowSibling && watchNowSibling.classList.contains('infuse-icon-injected')),
+      'og: "Watch Now" CTA is left untouched');
+
+    const weekRow = doc.querySelector('ul.week li.row');
+    const weekMini = weekRow && weekRow.querySelector('.tags .infuse-mini-btn');
+    assert(!!weekMini, 'og: calendar week row glyph appended to the tag row');
+    assert(weekMini && href(weekMini) === 'infuse://series/218313-2-6',
+      `og: week row deep link (${weekMini && href(weekMini)})`);
+    assert(!weekRow.querySelector('.poster .infuse-icon-injected'),
+      'og: week row poster stays clean');
+
+    // Uncached title: the id must come from the API fallback, and the scheduler
+    // must not re-fire it on every 2s injection pass.
+    await wait(500);
+    const uncachedBtn = doc.querySelector('#uncached-card .infuse-quick-btn');
+    assert(!!uncachedBtn, 'og: uncached card resolves through the API fallback');
+    assert(uncachedBtn && href(uncachedBtn) === 'infuse://series/95396',
+      `og: uncached card deep link (${uncachedBtn && href(uncachedBtn)})`);
+    const severanceCalls = fetchCalls.filter((u) => u.includes('severance'));
+    assert(severanceCalls.length === 1,
+      `og: one lookup per uncached title, no retry storm (${severanceCalls.length})`);
+    assert(severanceCalls[0] && severanceCalls[0].includes('apiz.trakt.tv'),
+      `og: apiz is tried first (${severanceCalls[0]})`);
+    const severanceOptions = fetchOptions.find((call) => call.url.includes('severance'));
+    const authHeaders = severanceOptions && severanceOptions.options && severanceOptions.options.headers;
+    assert(authHeaders && /^[a-f0-9]{64}$/i.test(authHeaders['trakt-api-key'] || ''),
+      'og: valid API key is used instead of the OIDC authority/client label');
+    assert(authHeaders && !authHeaders.Authorization,
+      'og: metadata lookup does not send the OIDC access token');
+
+    await wait(100);
+    window.close();
+    console.log(`[${TARGET}:og] ` + (process.exitCode === 1 ? 'RESULT: FAILURES' : 'RESULT: ALL PASS'));
+    process.exit(process.exitCode === 1 ? 1 : 0);
+  }
+
+  if (process.env.TVTIME) {
+    // tvtime.trakt.tv: hero action row + poster-card badges
+    const tvHeroBtn = doc.querySelector('.summary-actions-row .infuse-summary-btn');
+    assert(!!tvHeroBtn, 'tvtime: hero button injected into the summary action row');
+    assert(tvHeroBtn && tvHeroBtn.previousElementSibling === null,
+      'tvtime: hero button is the first control in the row');
+    assert(href(tvHeroBtn) === 'infuse://series/12345',
+      `tvtime: show deep link (${tvHeroBtn && href(tvHeroBtn)})`);
+
+    const tvCards = [...doc.querySelectorAll('.poster-card')];
+    assert(tvCards.length === 2, `tvtime: found ${tvCards.length} poster cards`);
+    const tvShowCard = tvCards.find((c) => c.querySelector('a[href="/shows/silo"]'));
+    const tvMovieCard = tvCards.find((c) => c.querySelector('a[href="/movies/some-movie"]'));
+    const tvShowBtn = tvShowCard && tvShowCard.querySelector('.infuse-poster-floating-btn');
+    const tvMovieBtn = tvMovieCard && tvMovieCard.querySelector('.infuse-poster-floating-btn');
+    assert(!!tvShowBtn && tvShowBtn.parentElement.classList.contains('poster-frame'),
+      'tvtime: show badge anchored on the poster frame');
+    assert(!!tvShowBtn && href(tvShowBtn) === 'infuse://series/12345',
+      `tvtime: show card deep link (${tvShowBtn && href(tvShowBtn)})`);
+    assert(!!tvMovieBtn && href(tvMovieBtn) === 'infuse://movie/4242',
+      `tvtime: movie card deep link (${tvMovieBtn && href(tvMovieBtn)})`);
+    assert(tvCards.every((c) => c.querySelectorAll('.infuse-icon-injected').length <= 1),
+      'tvtime: at most one injected button per poster card');
+    assert(!tvShowCard.querySelector('.action-btn .infuse-icon-injected') &&
+      [...tvShowCard.querySelectorAll('.action-btn')].every((b) => b.children.length === 0),
+      'tvtime: native watchlist/favorite action button untouched');
+
+    await wait(100);
+    window.close();
+    console.log(`[${TARGET}:tvtime] ` + (process.exitCode === 1 ? 'RESULT: FAILURES' : 'RESULT: ALL PASS'));
+    process.exit(process.exitCode === 1 ? 1 : 0);
+  }
 
   // 1. hero bar button sits next to the native ✓
   const heroBar = doc.querySelector('.trakt-summary-container .trakt-summary-actions-bar');
